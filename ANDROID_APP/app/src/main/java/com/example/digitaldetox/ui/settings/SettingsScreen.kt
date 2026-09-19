@@ -86,6 +86,7 @@ fun SettingsScreen(
                     NavItem("Home", "home", null),
                     NavItem("Detox", "detox", null),
                     NavItem("Apps", "apps", null),
+                    NavItem("Stats", "analytics", null),
                     NavItem("More", "settings", null)
                 ),
                 currentRoute = "settings",
@@ -340,21 +341,18 @@ fun SettingsScreen(
                                 .background(Color(0xFF141414))
                                 .padding(16.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     stageDetails.second,
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                     color = Color.White
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFF222222))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
                                     Text(
                                         stageDetails.first,

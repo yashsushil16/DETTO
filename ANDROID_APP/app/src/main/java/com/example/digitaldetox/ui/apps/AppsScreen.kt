@@ -75,6 +75,7 @@ fun AppsScreen(
                     NavItem("Home", "home", null),
                     NavItem("Detox", "detox", null),
                     NavItem("Apps", "apps", null),
+                    NavItem("Stats", "analytics", null),
                     NavItem("More", "settings", null)
                 ),
                 currentRoute = "apps",

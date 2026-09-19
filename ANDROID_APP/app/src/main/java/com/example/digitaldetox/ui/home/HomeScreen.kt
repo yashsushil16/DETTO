@@ -45,10 +45,11 @@ fun HomeScreen(
         bottomBar = {
             FloatingNavBar(
                 items = listOf(
-                    NavItem("Home", "home", null),
-                    NavItem("Detox", "detox", null),
-                    NavItem("Apps", "apps", null),
-                    NavItem("More", "settings", null)
+                    NavItem("Home", "home"),
+                    NavItem("Detox", "detox"),
+                    NavItem("Apps", "apps"),
+                    NavItem("Stats", "analytics"),
+                    NavItem("More", "settings")
                 ),
                 currentRoute = "home",
                 onNavigate = onNavigate,
