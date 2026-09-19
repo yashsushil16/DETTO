@@ -1,0 +1,25 @@
+# Root Gitignore for DETTO
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+.kotlin
+
+# Build artifacts
+**/build/
+**/.gradle/
+**/.kotlin/
+**/bin/
+*.apk
+*.aab
+*.ap_
+
+# Temporary / OS
+Thumbs.db
+Desktop.ini
