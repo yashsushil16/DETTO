@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "com.example.digitaldetox.app-debug-66:/xml_backup_rules.xml.flat",
+        "source": "com.example.digitaldetox.app-main-68:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "com.example.digitaldetox.app-debug-66:/xml_accessibility_service_config.xml.flat",
+        "source": "com.example.digitaldetox.app-main-68:/xml/accessibility_service_config.xml"
+    },
+    {
+        "merged": "com.example.digitaldetox.app-debug-66:/xml_data_extraction_rules.xml.flat",
+        "source": "com.example.digitaldetox.app-main-68:/xml/data_extraction_rules.xml"
+    }
+]
