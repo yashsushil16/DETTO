@@ -64,13 +64,14 @@ fun GameSelector(onGameSelected: (DetoxGame) -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
         Text(
             "Detox Zone",
-            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Black)
+            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(8.dp))
         Text(
             "Choose an activity to reset your focus",
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.Gray
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(48.dp))
 

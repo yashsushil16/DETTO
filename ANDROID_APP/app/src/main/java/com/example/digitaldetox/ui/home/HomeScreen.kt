@@ -108,7 +108,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "total screen",
+                        "screen time",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray
                     )

@@ -100,9 +100,8 @@ fun AppsScreen(
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Selected Apps", style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Black))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Toggle monitoring on/off. Tap + to add or remove apps.", style = MaterialTheme.typography.bodyMedium)
+                Text("Selected Apps", style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold))
+                Text("Toggle monitoring on/off. Tap + to add or remove apps.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Search Bar
