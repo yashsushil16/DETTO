@@ -72,7 +72,8 @@ fun SplashScreen(onFinished: () -> Unit) {
                     TreeVisualizer(
                         stage = stage,
                         healthRatio = 1f,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        showGlow = false
                     )
                 }
             }

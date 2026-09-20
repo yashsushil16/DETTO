@@ -42,7 +42,8 @@ private val CANOPY_WHITE    = Color(0xFFFFFFFF)
 fun TreeVisualizer(
     stage: String,
     healthRatio: Float = 1f,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showGlow: Boolean = true
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "tree_anim")
 
@@ -95,7 +96,7 @@ fun TreeVisualizer(
             val seedY = size.height * 0.62f
             val baseDim = min(size.width * 0.85f, size.height * 0.7f)
             val s = (baseDim / 240f) * hr
-            drawDetailedSeedWithGround(rootX, seedY, s, glowPulse, seedBreath, particleAngle)
+            drawDetailedSeedWithGround(rootX, seedY, s, glowPulse, seedBreath, particleAngle, showGlow)
         } else {
             val rootY = size.height * 0.84f
             val baseDim = min(size.width * 0.85f, size.height * 0.75f)
@@ -104,11 +105,11 @@ fun TreeVisualizer(
             drawGroundMound(rootX, rootY, 110f * s, s)
 
             when (stage) {
-                "Sprout" -> drawDetailedSprout(rootX, rootY, swayAngle, s, glowPulse, particleAngle)
-                "Plant"  -> drawDetailedPlant(rootX, rootY, swayAngle, s, glowPulse, particleAngle)
-                "Garden" -> drawDetailedGarden(rootX, rootY, swayAngle, s, glowPulse, particleAngle)
-                "Forest" -> drawDetailedForest(rootX, rootY, swayAngle, s, glowPulse, particleAngle)
-                else     -> drawDetailedTree(rootX, rootY, swayAngle, s, glowPulse, particleAngle, 1f)
+                "Sprout" -> drawDetailedSprout(rootX, rootY, swayAngle, s, glowPulse, particleAngle, showGlow)
+                "Plant"  -> drawDetailedPlant(rootX, rootY, swayAngle, s, glowPulse, particleAngle, showGlow)
+                "Garden" -> drawDetailedGarden(rootX, rootY, swayAngle, s, glowPulse, particleAngle, showGlow)
+                "Forest" -> drawDetailedForest(rootX, rootY, swayAngle, s, glowPulse, particleAngle, showGlow)
+                else     -> drawDetailedTree(rootX, rootY, swayAngle, s, glowPulse, particleAngle, 1f, showGlow)
             }
         }
     }
@@ -368,7 +369,7 @@ private fun DrawScope.drawGroundMound(x: Float, y: Float, radius: Float, s: Floa
 // ═══════════════════════════════════════════════════════
 private fun DrawScope.drawDetailedSeedWithGround(
     x: Float, y: Float, s: Float,
-    glow: Float, breath: Float, particleAngle: Float
+    glow: Float, breath: Float, particleAngle: Float, showGlow: Boolean
 ) {
     val soilW = 140f * s
     val seedScale = s * 1.5f * breath
@@ -376,7 +377,7 @@ private fun DrawScope.drawDetailedSeedWithGround(
     val seedY = y - 4f * s
 
     // Glow orb behind seed
-    drawGlowOrb(seedX, seedY - 10f * s, 50f * s, glow, particleAngle, 5)
+    if (showGlow) drawGlowOrb(seedX, seedY - 10f * s, 50f * s, glow, particleAngle, 5)
 
     // Soil bed
     drawOval(color = Color(0x50000000),
@@ -446,14 +447,14 @@ private fun DrawScope.drawDetailedSeedWithGround(
 // ═══════════════════════════════════════════════════════
 private fun DrawScope.drawDetailedSprout(
     x: Float, y: Float, sway: Float, s: Float,
-    glow: Float, particleAngle: Float
+    glow: Float, particleAngle: Float, showGlow: Boolean
 ) {
     val sc = s * 1.4f
     val tipX = x + sway * 2f
     val tipY = y - 90f * sc
 
     // Glow orb behind canopy
-    drawGlowOrb(tipX, tipY - 10f*sc, 38f*sc, glow, particleAngle, 4)
+    if (showGlow) drawGlowOrb(tipX, tipY - 10f*sc, 38f*sc, glow, particleAngle, 4)
 
     // Organic stem
     val stemPath = Path().apply {
@@ -479,14 +480,14 @@ private fun DrawScope.drawDetailedSprout(
 // ═══════════════════════════════════════════════════════
 private fun DrawScope.drawDetailedPlant(
     x: Float, y: Float, sway: Float, s: Float,
-    glow: Float, particleAngle: Float
+    glow: Float, particleAngle: Float, showGlow: Boolean
 ) {
     val sc = s * 1.22f
     val trunkTopY = y - 130f*sc
     val swayX = x + sway * 3f
 
     // Glow orb
-    drawGlowOrb(swayX, trunkTopY - 30f*sc, 58f*sc, glow, particleAngle, 5)
+    if (showGlow) drawGlowOrb(swayX, trunkTopY - 30f*sc, 58f*sc, glow, particleAngle, 5)
 
     // Trunk
     drawRichTrunk(x, y, swayX, trunkTopY, 14f*sc, 7f*sc)
@@ -509,14 +510,14 @@ private fun DrawScope.drawDetailedPlant(
 // ═══════════════════════════════════════════════════════
 private fun DrawScope.drawDetailedTree(
     x: Float, y: Float, sway: Float, s: Float,
-    glow: Float, particleAngle: Float, extraScale: Float
+    glow: Float, particleAngle: Float, extraScale: Float, showGlow: Boolean
 ) {
     val sc = s * extraScale
     val swayX = x + sway * 3.5f
     val trunkTopY = y - 160f * sc
 
     // Glow orb — drawn first so tree is on top
-    drawGlowOrb(swayX, trunkTopY - 38f*sc, 88f*sc, glow, particleAngle, 7)
+    if (showGlow) drawGlowOrb(swayX, trunkTopY - 38f*sc, 88f*sc, glow, particleAngle, 7)
 
     // Root flares
     drawRootFlares(x, y, sc)
@@ -553,11 +554,11 @@ private fun DrawScope.drawDetailedTree(
 // ═══════════════════════════════════════════════════════
 private fun DrawScope.drawDetailedGarden(
     x: Float, y: Float, sway: Float, s: Float,
-    glow: Float, particleAngle: Float
+    glow: Float, particleAngle: Float, showGlow: Boolean
 ) {
-    drawDetailedPlant(x - 88f*s, y + 5f, sway * 0.7f, s * 0.64f, glow, particleAngle)
-    drawDetailedSprout(x + 90f*s, y + 8f, sway * -0.6f, s * 0.68f, glow, particleAngle)
-    drawDetailedTree(x, y, sway, s, glow, particleAngle, 1.05f)
+    drawDetailedPlant(x - 88f*s, y + 5f, sway * 0.7f, s * 0.64f, glow, particleAngle, showGlow)
+    drawDetailedSprout(x + 90f*s, y + 8f, sway * -0.6f, s * 0.68f, glow, particleAngle, showGlow)
+    drawDetailedTree(x, y, sway, s, glow, particleAngle, 1.05f, showGlow)
 }
 
 // ═══════════════════════════════════════════════════════
@@ -565,13 +566,13 @@ private fun DrawScope.drawDetailedGarden(
 // ═══════════════════════════════════════════════════════
 private fun DrawScope.drawDetailedForest(
     x: Float, y: Float, sway: Float, s: Float,
-    glow: Float, particleAngle: Float
+    glow: Float, particleAngle: Float, showGlow: Boolean
 ) {
-    drawDetailedPlant(x - 108f*s, y + 5f, sway * 0.5f, s * 0.54f, glow, particleAngle)
-    drawDetailedPlant(x + 112f*s, y + 6f, sway * -0.7f, s * 0.56f, glow, particleAngle)
-    drawDetailedSprout(x - 52f*s, y + 10f, sway * 0.8f,  s * 0.5f, glow, particleAngle)
-    drawDetailedSprout(x + 58f*s, y + 12f, sway * -0.5f, s * 0.52f, glow, particleAngle)
-    drawDetailedTree(x, y, sway, s, glow, particleAngle, 1.15f)
+    drawDetailedPlant(x - 108f*s, y + 5f, sway * 0.5f, s * 0.54f, glow, particleAngle, showGlow)
+    drawDetailedPlant(x + 112f*s, y + 6f, sway * -0.7f, s * 0.56f, glow, particleAngle, showGlow)
+    drawDetailedSprout(x - 52f*s, y + 10f, sway * 0.8f,  s * 0.5f, glow, particleAngle, showGlow)
+    drawDetailedSprout(x + 58f*s, y + 12f, sway * -0.5f, s * 0.52f, glow, particleAngle, showGlow)
+    drawDetailedTree(x, y, sway, s, glow, particleAngle, 1.15f, showGlow)
 }
 
 // ═══════════════════════════════════════════════════════
