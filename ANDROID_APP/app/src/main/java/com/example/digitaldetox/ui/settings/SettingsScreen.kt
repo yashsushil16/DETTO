@@ -235,7 +235,7 @@ fun SettingsScreen(
 
                         // Header
                         Text(
-                            "✦ TREE EVOLUTION BY TIME",
+                            "↟ TREE EVOLUTION BY TIME",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 letterSpacing = 2.sp,
                                 fontWeight = FontWeight.Bold
@@ -253,12 +253,12 @@ fun SettingsScreen(
 
                         // Stage items with top symbol and bottom name
                         val stageSpecs = listOf(
-                            Triple("Seed", "●", "0m – 15m"),
-                            Triple("Sprout", "▲", "15m – 45m"),
-                            Triple("Plant", "⬡", "45m – 2h"),
-                            Triple("Tree", "◈", "2h – 4h"),
-                            Triple("Garden", "✦", "4h – 6h"),
-                            Triple("Forest", "❖", "6h+")
+                            Triple("Seed", "☘", "0h – 1h"),
+                            Triple("Sprout", "✿", "1h – 3h"),
+                            Triple("Plant", "✾", "3h – 6h"),
+                            Triple("Tree", "↟", "6h – 10h"),
+                            Triple("Garden", "✤", "10h – 14h"),
+                            Triple("Forest", "❁", "14h+")
                         )
 
                         Row(
@@ -303,32 +303,32 @@ fun SettingsScreen(
                         // Stage Information Header Card
                         val stageDetails = when (previewStage) {
                             "Seed" -> Triple(
-                                "0m – 15m Distraction-Free",
+                                "0h – 1h Distraction-Free",
                                 "Germinating Seed Bed",
                                 "Nestled into a zen soil bed with root tendrils and emerging cotyledon shoots, ready to bloom."
                             )
                             "Sprout" -> Triple(
-                                "15m – 45m Distraction-Free",
+                                "1h – 3h Distraction-Free",
                                 "Young Shoot",
                                 "A tender shoot with emerging leaves that sways lightly as your focus builds."
                             )
                             "Plant" -> Triple(
-                                "45m – 2h Distraction-Free",
+                                "3h – 6h Distraction-Free",
                                 "Young Bonsai",
                                 "Branch structures form and small cloud canopies begin sheltering the trunk."
                             )
                             "Tree" -> Triple(
-                                "2h – 4h Distraction-Free",
+                                "6h – 10h Distraction-Free",
                                 "Majestic Zen Bonsai",
                                 "Full Japanese cloud foliage, thick organic trunk, ambient aura, and glowing zen spores."
                             )
                             "Garden" -> Triple(
-                                "4h – 6h Distraction-Free",
+                                "10h – 14h Distraction-Free",
                                 "Harmonic Garden",
                                 "Your grand bonsai is joined by blooming companion sprouts and plants in harmony."
                             )
                             else -> Triple(
-                                "6h+ Distraction-Free",
+                                "14h+ Distraction-Free",
                                 "Ancient Forest Sanctuary",
                                 "Multiple flourishing trees and dense crowns celebrating your master discipline."
                             )
@@ -395,7 +395,7 @@ fun SettingsScreen(
 
                         // App Features Breakdown with clean spacing
                         Text(
-                            "✦ CORE FEATURES",
+                            "↟ CORE FEATURES",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 letterSpacing = 2.sp,
                                 fontWeight = FontWeight.Bold
@@ -405,12 +405,12 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            HelpItem("◈ Focus to Grow", "The tree progresses through these 6 stages based on your daily distraction-free hours. Usage on tracked apps stunts its health.")
-                            HelpItem("◈ App Selection", "Go to the Apps tab to choose which apps DETTO tracks. Enabled apps are automatically pinned to the top.")
-                            HelpItem("◈ Per-App Timers", "Tap the timer icon on any app card to give it an individual daily limit.")
-                            HelpItem("◈ Intervention Overlay", "When opening a tracked app, DETTO provides a calming mini-game to break the dopamine scroll loop.")
-                            HelpItem("◈ Detox Tab", "Play Number Order, Breathing Circle (4-7-8), or Pattern Memory anytime for mindful relaxation.")
-                            HelpItem("◈ 11 PM Analytics", "Receive your evening breakdown notification to reflect on today's tree status and digital wellness.")
+                            HelpItem("✿ Focus to Grow", "The tree progresses through these 6 stages based on your daily distraction-free hours. Usage on tracked apps stunts its health.")
+                            HelpItem("✿ App Selection", "Go to the Apps tab to choose which apps DETTO tracks. Enabled apps are automatically pinned to the top.")
+                            HelpItem("✿ Per-App Timers", "Tap the timer icon on any app card to give it an individual daily limit.")
+                            HelpItem("✿ Intervention Overlay", "When opening a tracked app, DETTO provides a calming mini-game to break the dopamine scroll loop.")
+                            HelpItem("✿ Detox Tab", "Play Number Order, Breathing Circle (4-7-8), or Pattern Memory anytime for mindful relaxation.")
+                            HelpItem("✿ 11 PM Analytics", "Receive your evening breakdown notification to reflect on today's tree status and digital wellness.")
                         }
                     }
                 }

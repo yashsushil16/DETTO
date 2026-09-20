@@ -148,19 +148,50 @@ class HomeViewModel(
             _trackedAppUsageList.value = appUsageDetailedList.sortedByDescending { it.usageMs }
 
             val avgPenalty = if (appCount > 0) totalPenalty / appCount else 0f
-            val health = (1f - avgPenalty * 0.25f).coerceIn(0.7f, 1.3f)
+            val health = (1f - avgPenalty * 0.60f).coerceIn(0.4f, 1.3f)
             _healthRatio.value = health
 
             _treeStage.value = when {
-                distractionFreeHours >= 6.0f -> "Forest"
-                distractionFreeHours >= 4.0f -> "Garden"
-                distractionFreeHours >= 2.0f -> "Tree"
-                distractionFreeHours >= 0.75f -> "Plant"
-                distractionFreeHours >= 0.25f -> "Sprout"
+                distractionFreeHours >= 14.0f -> "Forest"
+                distractionFreeHours >= 10.0f -> "Garden"
+                distractionFreeHours >= 6.0f -> "Tree"
+                distractionFreeHours >= 3.0f -> "Plant"
+                distractionFreeHours >= 1.0f -> "Sprout"
                 else -> "Seed"
             }
 
-            // Generate Hourly Usage Timeline points for today (12 AM to current hour)
+            // Generate Hourly Usage Timeline points for today (12 AM to current hour) using exact UsageEvents
+            val hourlyTotalMs = LongArray(24) { 0L }
+            val hourlyDistMs = LongArray(24) { 0L }
+            
+            val events = usageStatsManager.queryEvents(startTime, endTime)
+            val event = UsageEvents.Event()
+            
+            // Map of packageName -> last resumed timestamp
+            val activeApps = mutableMapOf<String, Long>()
+            
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                val time = event.timeStamp
+                val pkg = event.packageName
+                val eType = event.eventType
+                
+                if (eType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                    activeApps[pkg] = time
+                } else if (eType == UsageEvents.Event.ACTIVITY_PAUSED || eType == UsageEvents.Event.ACTIVITY_STOPPED) {
+                    val start = activeApps.remove(pkg)
+                    if (start != null && start > 0) {
+                        val end = time
+                        addUsageToBuckets(start, end, hourlyTotalMs, hourlyDistMs, pkg, trackedApps.containsKey(pkg))
+                    }
+                }
+            }
+            // Close unclosed events up to now
+            val now = System.currentTimeMillis()
+            activeApps.forEach { (pkg, start) ->
+                addUsageToBuckets(start, now, hourlyTotalMs, hourlyDistMs, pkg, trackedApps.containsKey(pkg))
+            }
+
             val hourlyPoints = mutableListOf<HourlyUsagePoint>()
             for (h in 0..currentHour.coerceAtLeast(12)) {
                 val hourLabel = when {
@@ -170,22 +201,54 @@ class HomeViewModel(
                     else -> "${h - 12}p"
                 }
 
-                // Approximate distribution based on day's usage
-                val factor = if (h in 8..currentHour) 1f else 0.2f
-                val totalMinForHour = if (currentHour > 0) (totalTime / 1000f / 60f / (currentHour + 1)) * factor else 0f
-                val distMinForHour = if (currentHour > 0) (distractiveTime / 1000f / 60f / (currentHour + 1)) * factor else 0f
+                val totalMinForHour = hourlyTotalMs[h] / 60000f
+                val distMinForHour = hourlyDistMs[h] / 60000f
 
                 hourlyPoints.add(
                     HourlyUsagePoint(
                         hour = h,
                         hourLabel = hourLabel,
-                        totalMinutes = totalMinForHour.coerceAtLeast(0f),
-                        distractiveMinutes = distMinForHour.coerceAtLeast(0f),
+                        totalMinutes = totalMinForHour,
+                        distractiveMinutes = distMinForHour,
                         isCurrentHour = (h == currentHour)
                     )
                 )
             }
             _hourlyUsageList.value = hourlyPoints
+        }
+    }
+
+    private fun addUsageToBuckets(
+        startMs: Long,
+        endMs: Long,
+        hourlyTotalMs: LongArray,
+        hourlyDistMs: LongArray,
+        pkg: String,
+        isTracked: Boolean
+    ) {
+        if (startMs >= endMs) return
+        val calendar = java.util.Calendar.getInstance()
+        var currentMs = startMs
+        
+        while (currentMs < endMs) {
+            calendar.timeInMillis = currentMs
+            val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+            
+            // Calculate next hour boundary
+            calendar.set(java.util.Calendar.MINUTE, 0)
+            calendar.set(java.util.Calendar.SECOND, 0)
+            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            calendar.add(java.util.Calendar.HOUR_OF_DAY, 1)
+            val nextHourMs = calendar.timeInMillis
+            
+            val msInThisHour = kotlin.math.min(endMs, nextHourMs) - currentMs
+            if (hour in 0..23) {
+                hourlyTotalMs[hour] += msInThisHour
+                if (isTracked) {
+                    hourlyDistMs[hour] += msInThisHour
+                }
+            }
+            currentMs = nextHourMs
         }
     }
 }

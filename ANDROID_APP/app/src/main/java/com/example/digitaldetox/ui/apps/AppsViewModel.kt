@@ -27,37 +27,60 @@ class AppsViewModel(
     private val _installedApps = MutableStateFlow<List<AppItem>>(emptyList())
     val installedApps: StateFlow<List<AppItem>> = _installedApps.asStateFlow()
 
+    private val _trackedApps = MutableStateFlow<List<AppItem>>(emptyList())
+    val trackedApps: StateFlow<List<AppItem>> = _trackedApps.asStateFlow()
+
     init {
-        loadApps()
+        viewModelScope.launch {
+            appRepository.getAllTrackedApps().collect { trackedList ->
+                _trackedApps.value = trackedList.map { entity ->
+                    AppItem(
+                        packageName = entity.packageName,
+                        appName = entity.displayName,
+                        isTracked = true,
+                        dailyLimitMs = entity.dailyLimitMs
+                    )
+                }.sortedBy { it.appName }
+                
+                // If installedApps is already loaded, update their tracked status too
+                if (_installedApps.value.isNotEmpty()) {
+                    val trackedMap = trackedList.associateBy { it.packageName }
+                    _installedApps.value = _installedApps.value.map { app ->
+                        app.copy(
+                            isTracked = trackedMap.containsKey(app.packageName),
+                            dailyLimitMs = trackedMap[app.packageName]?.dailyLimitMs ?: 0L
+                        )
+                    }
+                }
+            }
+        }
     }
 
-    private fun loadApps() {
+    fun loadAllApps() {
+        if (_installedApps.value.isNotEmpty()) return // Already loaded
+
         viewModelScope.launch {
             val pm = context.packageManager
             val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            val trackedMap = _trackedApps.value.associateBy { it.packageName }
             
-            // Get all currently tracked apps from DB
-            appRepository.getAllTrackedApps().collect { trackedList ->
-                val trackedMap = trackedList.associateBy { it.packageName }
-                
-                val knownDistractive = listOf("instagram", "facebook", "reddit", "tiktok", "twitter", "snapchat", "youtube")
-                
-                val userApps = packages.filter { 
-                    (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || 
-                    knownDistractive.any { name -> it.packageName.contains(name) }
-                }.map { appInfo ->
-                    AppItem(
-                        packageName = appInfo.packageName,
-                        appName = pm.getApplicationLabel(appInfo).toString(),
-                        isTracked = trackedMap.containsKey(appInfo.packageName),
-                        dailyLimitMs = trackedMap[appInfo.packageName]?.dailyLimitMs ?: 0L
-                    )
-                }.sortedWith(compareByDescending<AppItem> { app -> 
-                    knownDistractive.any { name -> app.packageName.contains(name) }
-                }.thenBy { it.appName })
+            val knownDistractive = listOf("instagram", "facebook", "reddit", "tiktok", "twitter", "snapchat", "youtube")
+            
+            val userApps = packages.filter { 
+                (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || 
+                knownDistractive.any { name -> it.packageName.contains(name) }
+            }.map { appInfo ->
+                AppItem(
+                    packageName = appInfo.packageName,
+                    appName = pm.getApplicationLabel(appInfo).toString(),
+                    isTracked = trackedMap.containsKey(appInfo.packageName),
+                    dailyLimitMs = trackedMap[appInfo.packageName]?.dailyLimitMs ?: 0L
+                )
+            }.sortedWith(compareByDescending<AppItem> { app -> 
+                knownDistractive.any { name -> app.packageName.contains(name) }
+            }.thenBy { it.appName })
 
-                _installedApps.value = userApps
-            }
+            _installedApps.value = userApps
         }
     }
 

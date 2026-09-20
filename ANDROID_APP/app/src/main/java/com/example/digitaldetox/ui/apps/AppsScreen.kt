@@ -11,9 +11,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,30 +45,34 @@ fun AppsScreen(
         viewModel()
     }
     
-    val apps by viewModel.installedApps.collectAsState()
+    val apps by viewModel.trackedApps.collectAsState()
     
     var searchQuery by remember { mutableStateOf("") }
     var selectedApp by remember { mutableStateOf<AppItem?>(null) }
     var showTimerDialog by remember { mutableStateOf(false) }
+    var showAddAppsDialog by remember { mutableStateOf(false) }
 
-    // Sort: tracked apps first, then alphabetically within each group
-    val sortedApps = apps.sortedWith(compareByDescending<AppItem> { it.isTracked }.thenBy { it.appName })
-    val filteredApps = if (searchQuery.isBlank()) sortedApps
-    else sortedApps.filter { it.appName.contains(searchQuery, ignoreCase = true) }
+    val filteredApps = if (searchQuery.isBlank()) apps
+    else apps.filter { it.appName.contains(searchQuery, ignoreCase = true) }
 
-    // Timer Dialog
     if (showTimerDialog && selectedApp != null) {
         AppTimerDialog(
             appItem = selectedApp!!,
             onDismiss = { showTimerDialog = false },
             onConfirm = { limitMs ->
                 viewModel.setAppDailyLimit(selectedApp!!, limitMs)
-                // Also ensure tracked
                 if (!selectedApp!!.isTracked) {
                     viewModel.toggleAppTracking(selectedApp!!)
                 }
                 showTimerDialog = false
             }
+        )
+    }
+    
+    if (showAddAppsDialog) {
+        AppSelectionDialog(
+            viewModel = viewModel,
+            onDismiss = { showAddAppsDialog = false }
         )
     }
 
@@ -82,6 +90,15 @@ fun AppsScreen(
                 onNavigate = onNavigate,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddAppsDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 80.dp)
+            ) {
+                Text("+", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.Black)
+            }
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -105,54 +122,139 @@ fun AppsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(filteredApps, key = { it.packageName }) { appItem ->
-                        GlassCard(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(appItem.appName, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
-                                    if (appItem.isTracked && appItem.dailyLimitMs > 0L) {
-                                        val h = appItem.dailyLimitMs / (1000 * 60 * 60)
-                                        val m = (appItem.dailyLimitMs / (1000 * 60)) % 60
-                                        Text(
-                                            "Limit: ${if (h > 0) "${h}h " else ""}${m}m",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    } else if (appItem.isTracked) {
-                                        Text(
-                                            "Using global limit",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-
-                                // Timer button
-                                TextButton(
-                                    onClick = {
-                                        selectedApp = appItem
-                                        showTimerDialog = true
-                                    }
+                if (filteredApps.isEmpty() && searchQuery.isBlank()) {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        Text("No apps monitored yet. Tap + to add.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(filteredApps, key = { it.packageName }) { appItem ->
+                            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        "⏱",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = if (appItem.dailyLimitMs > 0L && appItem.isTracked)
-                                            MaterialTheme.colorScheme.primary
-                                        else
-                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(appItem.appName, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
+                                        if (appItem.isTracked && appItem.dailyLimitMs > 0L) {
+                                            val h = appItem.dailyLimitMs / (1000 * 60 * 60)
+                                            val m = (appItem.dailyLimitMs / (1000 * 60)) % 60
+                                            Text(
+                                                "Limit: ${if (h > 0) "${h}h " else ""}${m}m",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        } else if (appItem.isTracked) {
+                                            Text(
+                                                "Using global limit",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+    
+                                    // Timer button
+                                    TextButton(
+                                        onClick = {
+                                            selectedApp = appItem
+                                            showTimerDialog = true
+                                        }
+                                    ) {
+                                        Text(
+                                            "⏱",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = if (appItem.dailyLimitMs > 0L && appItem.isTracked)
+                                                MaterialTheme.colorScheme.primary
+                                            else
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+    
+                                    Switch(
+                                        checked = appItem.isTracked,
+                                        onCheckedChange = { viewModel.toggleAppTracking(appItem) }
                                     )
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
-                                Switch(
-                                    checked = appItem.isTracked,
-                                    onCheckedChange = { viewModel.toggleAppTracking(appItem) }
-                                )
+@Composable
+fun AppSelectionDialog(
+    viewModel: AppsViewModel,
+    onDismiss: () -> Unit
+) {
+    LaunchedEffect(Unit) {
+        viewModel.loadAllApps()
+    }
+    
+    val allApps by viewModel.installedApps.collectAsState()
+    var dialogSearchQuery by remember { mutableStateOf("") }
+    
+    val filteredAllApps = if (dialogSearchQuery.isBlank()) allApps
+    else allApps.filter { it.appName.contains(dialogSearchQuery, ignoreCase = true) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color(0xFF0F0F0F)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Select Apps", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold))
+                    TextButton(onClick = onDismiss) { Text("Done") }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = dialogSearchQuery,
+                    onValueChange = { dialogSearchQuery = it },
+                    placeholder = { Text("Search installed apps...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.large
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (allApps.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(filteredAllApps, key = { it.packageName }) { appItem ->
+                            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        appItem.appName,
+                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Switch(
+                                        checked = appItem.isTracked,
+                                        onCheckedChange = { viewModel.toggleAppTracking(appItem) }
+                                    )
+                                }
                             }
                         }
                     }

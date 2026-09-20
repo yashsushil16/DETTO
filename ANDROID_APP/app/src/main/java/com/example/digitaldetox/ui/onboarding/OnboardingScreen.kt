@@ -66,39 +66,39 @@ fun OnboardingScreen(
                     title = "Welcome to DETTO",
                     subtitle = "Your digital detox companion",
                     items = listOf(
-                        "✦ A tree grows on your home screen — it thrives when you stay off distracting apps.",
-                        "◈ The more you use tracked apps, the smaller the tree gets. Stay focused and watch it flourish.",
-                        "◈ Your main timer shows distraction-free time: hours in the day you haven't spent on tracked apps."
+                        "✿ A tree grows on your home screen — it thrives when you stay off distracting apps.",
+                        "↟ The more you use tracked apps, the smaller the tree gets. Stay focused and watch it flourish.",
+                        "↟ Your main timer shows distraction-free time: hours in the day you haven't spent on tracked apps."
                     )
                 )
                 1 -> TutorialPage(
                     title = "App Selection & Timers",
                     subtitle = "Customize what to limit",
                     items = listOf(
-                        "✦ In the Apps tab, toggle any app on/off to track it.",
-                        "◈ Tap the clock icon on any app to set a per-app daily limit (e.g. 30 min for Instagram).",
-                        "◈ Use the search bar to find apps quickly.",
-                        "◈ In Settings → More, set a global daily limit for all tracked apps combined."
+                        "✿ In the Apps tab, toggle any app on/off to track it.",
+                        "↟ Tap the clock icon on any app to set a per-app daily limit (e.g. 30 min for Instagram).",
+                        "↟ Use the search bar to find apps quickly.",
+                        "↟ In Settings → More, set a global daily limit for all tracked apps combined."
                     )
                 )
                 2 -> TutorialPage(
                     title = "Overlay & Games",
                     subtitle = "When you open a tracked app...",
                     items = listOf(
-                        "✦ DETTO pops up an intervention screen before you can use the app.",
-                        "◈ You must complete a mini-game (like tapping numbers 1–9 in order) to proceed.",
-                        "◈ In the Detox tab, play calming games anytime: Breathing Circle, Number Sequence, Pattern Memory.",
-                        "◈ After completing the game, you can choose to continue to the app or go home."
+                        "✿ DETTO pops up an intervention screen before you can use the app.",
+                        "↟ You must complete a mini-game (like tapping numbers 1–9 in order) to proceed.",
+                        "↟ In the Detox tab, play calming games anytime: Breathing Circle, Number Sequence, Pattern Memory.",
+                        "↟ After completing the game, you can choose to continue to the app or go home."
                     )
                 )
                 3 -> TutorialPage(
                     title = "Analytics & Growth",
                     subtitle = "Track your progress",
                     items = listOf(
-                        "✦ At 11 PM each night, you'll receive a notification with your daily analytics.",
-                        "◈ Your tree progresses through stages: Seed → Sprout → Plant → Tree → Garden → Forest.",
-                        "◈ The Analytics screen shows total screen time, distraction-free time, and improvement tips.",
-                        "◈ The less you use distracting apps, the healthier and larger your tree becomes!"
+                        "✿ At 11 PM each night, you'll receive a notification with your daily analytics.",
+                        "↟ Your tree progresses through stages: Seed → Sprout → Plant → Tree → Garden → Forest.",
+                        "↟ The Analytics screen shows total screen time, distraction-free time, and improvement tips.",
+                        "↟ The less you use distracting apps, the healthier and larger your tree becomes!"
                     )
                 )
                 4 -> {

@@ -111,15 +111,7 @@ fun AnalyticsScreen(
             // ── Primary Time Overview Card ──
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        "✦ DISTRACTION-FREE TODAY",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            letterSpacing = 2.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
+
                     Text(
                         formatDuration(distractionFreeTime),
                         style = MaterialTheme.typography.displayMedium.copy(
@@ -198,7 +190,7 @@ fun AnalyticsScreen(
                                     .background(
                                         if (budgetUsedFraction >= 1f) MaterialTheme.colorScheme.error
                                         else if (budgetUsedFraction > 0.75f) Color(0xFFFFA726)
-                                        else Color(0xFF66BB6A)
+                                        else MaterialTheme.colorScheme.primary
                                     )
                             )
                         }
@@ -351,11 +343,11 @@ fun AnalyticsScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val isHealthy = distractiveTime <= globalLimitMs
                     if (isHealthy) {
-                        InsightItem("✦ Strong Self-Discipline", "You are comfortably within your daily distraction limits. Your tree continues to flourish.")
-                        InsightItem("◈ Evening Reset", "Use the Breathing Circle in the Detox tab before bed to unwind without screen glare.")
+                        InsightItem("↟ Strong Self-Discipline", "You are comfortably within your daily distraction limits. Your tree continues to flourish.")
+                        InsightItem("✿ Evening Reset", "Use the Breathing Circle in the Detox tab before bed to unwind without screen glare.")
                     } else {
-                        InsightItem("✦ Limit Exceeded", "Distraction time went over your budget. Play a Detox mini-game next time you open a tracked app.")
-                        InsightItem("◈ Per-App Limits", "Consider setting a stricter limit on your top-used app in the Apps tab.")
+                        InsightItem("↟ Limit Exceeded", "Distraction time went over your budget. Play a Detox mini-game next time you open a tracked app.")
+                        InsightItem("✿ Per-App Limits", "Consider setting a stricter limit on your top-used app in the Apps tab.")
                     }
                 }
             }
@@ -460,39 +452,61 @@ fun HourlyChartCanvas(
     hourlyList: List<HourlyUsagePoint>,
     modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = modifier) {
-        if (hourlyList.isEmpty()) return@Canvas
+    Box(modifier = modifier) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            if (hourlyList.isEmpty()) return@Canvas
+            
+            val maxVal = (hourlyList.maxOfOrNull { it.totalMinutes } ?: 10f).coerceAtLeast(10f)
+            val barCount = hourlyList.size
+            val availableWidth = size.width
+            val barSpacing = 4.dp.toPx()
+            val totalSpacing = barSpacing * (barCount - 1)
+            val barWidth = ((availableWidth - totalSpacing) / barCount).coerceIn(4f, 24f)
 
-        val maxVal = (hourlyList.maxOfOrNull { it.totalMinutes } ?: 10f).coerceAtLeast(10f)
-        val barCount = hourlyList.size
-        val availableWidth = size.width
-        val barSpacing = 4.dp.toPx()
-        val totalSpacing = barSpacing * (barCount - 1)
-        val barWidth = ((availableWidth - totalSpacing) / barCount).coerceIn(4f, 24f)
+            hourlyList.forEachIndexed { index, point ->
+                val x = index * (barWidth + barSpacing)
+                val barHeight = (point.totalMinutes / maxVal) * (size.height * 0.75f)
+                // Leave room at the bottom for labels
+                val topY = size.height - barHeight - 24.dp.toPx()
 
-        hourlyList.forEachIndexed { index, point ->
-            val x = index * (barWidth + barSpacing)
-            val barHeight = (point.totalMinutes / maxVal) * (size.height * 0.75f)
-            val topY = size.height - barHeight - 16.dp.toPx()
-
-            // Draw base bar
-            drawRoundRect(
-                color = if (point.isCurrentHour) Color(0xFFFFFFFF) else Color(0xFF333333),
-                topLeft = Offset(x, topY),
-                size = Size(barWidth, barHeight.coerceAtLeast(4f)),
-                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
-            )
-
-            // If distractive usage exists in this hour, overlay highlight
-            if (point.distractiveMinutes > 0f) {
-                val distHeight = (point.distractiveMinutes / maxVal) * (size.height * 0.75f)
-                val distTopY = size.height - distHeight - 16.dp.toPx()
                 drawRoundRect(
-                    color = Color(0xFFE57373),
-                    topLeft = Offset(x, distTopY),
-                    size = Size(barWidth, distHeight.coerceAtLeast(4f)),
+                    color = if (point.isCurrentHour) Color(0xFFFFFFFF) else Color(0xFF333333),
+                    topLeft = Offset(x, topY),
+                    size = Size(barWidth, barHeight.coerceAtLeast(4f)),
                     cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
                 )
+
+                if (point.distractiveMinutes > 0f) {
+                    val distHeight = (point.distractiveMinutes / maxVal) * (size.height * 0.75f)
+                    val distTopY = size.height - distHeight - 24.dp.toPx()
+                    drawRoundRect(
+                        color = Color(0xFFE57373),
+                        topLeft = Offset(x, distTopY),
+                        size = Size(barWidth, distHeight.coerceAtLeast(4f)),
+                        cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                    )
+                }
+            }
+        }
+        
+        // Labels overlay
+        if (hourlyList.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomStart).padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Show a few key markers: 12am, 6am, 12pm, 6pm, Now
+                val markers = listOf(0, 6, 12, 18, hourlyList.last().hour)
+                val visibleMarkers = hourlyList.filter { it.hour in markers }.distinctBy { it.hour }
+                
+                visibleMarkers.forEach { pt ->
+                    Text(
+                        if (pt.isCurrentHour) "Now" else pt.hourLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Gray,
+                        fontSize = 10.sp
+                    )
+                }
             }
         }
     }
