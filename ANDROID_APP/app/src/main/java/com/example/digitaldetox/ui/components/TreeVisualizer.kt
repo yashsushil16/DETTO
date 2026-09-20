@@ -126,43 +126,38 @@ private fun DrawScope.drawGlowOrb(
 ) {
     val r = baseRadius * pulse
 
-    // Outermost wisp — very faint corona
-    drawCircle(Color(0x08FFFFFF), r * 2.6f, Offset(cx, cy))
-    // Wide soft halo
-    drawCircle(Color(0x10FFFFFF), r * 2.0f, Offset(cx, cy))
-    // Medium ring
-    drawCircle(Color(0x18FFFFFF), r * 1.5f, Offset(cx, cy))
-    // Inner bright ring
-    drawCircle(Color(0x28FFFFFF), r * 1.15f, Offset(cx, cy))
-    // Core bright nucleus
-    drawCircle(Color(0x40FFFFFF), r * 0.72f, Offset(cx, cy))
-    // Hot center
-    drawCircle(Color(0x60FFFFFF), r * 0.38f, Offset(cx, cy))
+    // Very subtle concentric halos — calming, not blinding
+    drawCircle(Color(0x04FFFFFF), r * 2.6f, Offset(cx, cy))
+    drawCircle(Color(0x06FFFFFF), r * 2.0f, Offset(cx, cy))
+    drawCircle(Color(0x09FFFFFF), r * 1.5f, Offset(cx, cy))
+    drawCircle(Color(0x0EFFFFFF), r * 1.15f, Offset(cx, cy))
+    drawCircle(Color(0x16FFFFFF), r * 0.72f, Offset(cx, cy))
+    drawCircle(Color(0x22FFFFFF), r * 0.38f, Offset(cx, cy))
 
-    // Concentric ring outlines for depth
-    drawCircle(Color(0x12FFFFFF), r * 1.75f, Offset(cx, cy),
-        style = Stroke(width = r * 0.04f))
-    drawCircle(Color(0x18FFFFFF), r * 1.3f, Offset(cx, cy),
-        style = Stroke(width = r * 0.03f))
+    // Very faint ring outlines
+    drawCircle(Color(0x07FFFFFF), r * 1.75f, Offset(cx, cy),
+        style = Stroke(width = r * 0.025f))
+    drawCircle(Color(0x09FFFFFF), r * 1.3f, Offset(cx, cy),
+        style = Stroke(width = r * 0.018f))
 
-    // Orbiting spore particles
+    // Soft orbiting motes — barely visible
     for (i in 0 until particleCount) {
         val angle = Math.toRadians((particleAngle + (360f / particleCount) * i).toDouble())
         val orbitR = r * 1.5f
         val px = cx + orbitR * cos(angle).toFloat()
         val py = cy + orbitR * sin(angle).toFloat()
-        val pSize = r * 0.07f * (0.6f + 0.4f * ((i % 3).toFloat() / 2f))
-        drawCircle(Color(0x55FFFFFF), pSize, Offset(px, py))
-        drawCircle(Color(0x30FFFFFF), pSize * 1.8f, Offset(px, py))
+        val pSize = r * 0.055f * (0.6f + 0.4f * ((i % 3).toFloat() / 2f))
+        drawCircle(Color(0x20FFFFFF), pSize, Offset(px, py))
+        drawCircle(Color(0x10FFFFFF), pSize * 1.5f, Offset(px, py))
     }
 
-    // Counter-rotating spores on tighter orbit
+    // Counter-rotating inner motes
     for (i in 0 until (particleCount / 2)) {
         val angle = Math.toRadians((-particleAngle * 0.6f + (360f / (particleCount / 2)) * i).toDouble())
         val orbitR = r * 1.1f
         val px = cx + orbitR * cos(angle).toFloat()
         val py = cy + orbitR * sin(angle).toFloat()
-        drawCircle(Color(0x40FFFFFF), r * 0.045f, Offset(px, py))
+        drawCircle(Color(0x14FFFFFF), r * 0.038f, Offset(px, py))
     }
 }
 
@@ -171,9 +166,9 @@ private fun DrawScope.drawGlowOrb(
 // Multiple layers: shadow base → mid tones → bright top-left highlight → specular
 // ═══════════════════════════════════════════════════════
 private fun DrawScope.drawFoliageSphere(cx: Float, cy: Float, r: Float) {
-    // Drop shadow ellipse beneath sphere
+    // Subtle drop shadow
     drawOval(
-        color = Color(0x40000000),
+        color = Color(0x25000000),
         topLeft = Offset(cx - r * 0.9f, cy + r * 0.7f),
         size = Size(r * 1.8f, r * 0.4f)
     )
@@ -181,12 +176,12 @@ private fun DrawScope.drawFoliageSphere(cx: Float, cy: Float, r: Float) {
     // Base fill — darkest
     drawCircle(CANOPY_DARKEST, r, Offset(cx, cy))
 
-    // Lower hemisphere shadow gradient (bottom-right darker)
+    // Lower hemisphere shadow gradient (gentle)
     drawCircle(
         brush = Brush.radialGradient(
             0f to Color(0x00000000),
-            0.5f to Color(0x20000000),
-            1f to Color(0x60000000),
+            0.5f to Color(0x12000000),
+            1f to Color(0x40000000),
             center = Offset(cx + r * 0.2f, cy + r * 0.2f),
             radius = r
         ),
@@ -194,11 +189,10 @@ private fun DrawScope.drawFoliageSphere(cx: Float, cy: Float, r: Float) {
         center = Offset(cx, cy)
     )
 
-    // Mid-tone fill (main body colour)
     drawCircle(CANOPY_DARK, r * 0.88f, Offset(cx - r * 0.05f, cy - r * 0.02f))
     drawCircle(CANOPY_MID,  r * 0.72f, Offset(cx - r * 0.08f, cy - r * 0.06f))
 
-    // Leaf texture lines (vein-like arcs)
+    // Subtle leaf veins
     val veins = listOf(
         Pair(Offset(cx - r * 0.3f, cy - r * 0.35f), Offset(cx + r * 0.25f, cy + r * 0.15f)),
         Pair(Offset(cx - r * 0.1f, cy - r * 0.4f),  Offset(cx + r * 0.35f, cy + r * 0.3f)),
@@ -207,21 +201,20 @@ private fun DrawScope.drawFoliageSphere(cx: Float, cy: Float, r: Float) {
     for ((a, b) in veins) {
         val veinPath = Path().apply {
             moveTo(a.x, a.y)
-            quadraticBezierTo(cx, cy, b.x, b.y)
+            quadraticTo(cx, cy, b.x, b.y)
         }
-        drawPath(veinPath, Color(0x18000000), style = Stroke(width = r * 0.04f, cap = StrokeCap.Round))
-        drawPath(veinPath, Color(0x10FFFFFF), style = Stroke(width = r * 0.025f, cap = StrokeCap.Round))
+        drawPath(veinPath, Color(0x10000000), style = Stroke(width = r * 0.035f, cap = StrokeCap.Round))
+        drawPath(veinPath, Color(0x08FFFFFF), style = Stroke(width = r * 0.02f, cap = StrokeCap.Round))
     }
 
-    // Top-left bright highlight (simulates light source)
-    drawCircle(CANOPY_LIGHT,  r * 0.45f, Offset(cx - r * 0.22f, cy - r * 0.26f))
-    drawCircle(CANOPY_HILIGHT, r * 0.28f, Offset(cx - r * 0.28f, cy - r * 0.32f))
-    // Specular hot-spot
-    drawCircle(CANOPY_WHITE,  r * 0.14f, Offset(cx - r * 0.32f, cy - r * 0.38f))
-    drawCircle(Color(0x88FFFFFF), r * 0.07f, Offset(cx - r * 0.34f, cy - r * 0.41f))
+    // Soft top-left highlight (gentle, not harsh)
+    drawCircle(CANOPY_LIGHT,  r * 0.38f, Offset(cx - r * 0.22f, cy - r * 0.26f))
+    drawCircle(CANOPY_HILIGHT, r * 0.20f, Offset(cx - r * 0.28f, cy - r * 0.32f))
+    // Soft specular — smaller and more translucent
+    drawCircle(Color(0xCCFFFFFF),  r * 0.09f, Offset(cx - r * 0.32f, cy - r * 0.38f))
 
-    // Outer rim edge (subtle rim-light on bottom-right for depth)
-    drawCircle(CANOPY_MID, r, Offset(cx, cy), style = Stroke(width = r * 0.05f))
+    // Subtle rim edge
+    drawCircle(CANOPY_DARK, r, Offset(cx, cy), style = Stroke(width = r * 0.04f))
 }
 
 // ═══════════════════════════════════════════════════════

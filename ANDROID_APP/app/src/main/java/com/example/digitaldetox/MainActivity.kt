@@ -10,11 +10,20 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -23,6 +32,7 @@ import com.example.digitaldetox.data.preferences.UserPreferencesRepository
 import com.example.digitaldetox.data.preferences.dataStore
 import com.example.digitaldetox.data.local.datastore.AppSettings
 import com.example.digitaldetox.ui.navigation.DettoNavGraph
+import com.example.digitaldetox.ui.splash.SplashScreen
 import com.example.digitaldetox.ui.theme.DettoTheme
 import com.example.digitaldetox.worker.DailyAnalyticsWorker
 import java.util.Calendar
@@ -57,17 +67,31 @@ class MainActivity : ComponentActivity() {
         setContent {
             DettoTheme {
                 val onboardingCompleted by userPreferencesRepository.onboardingCompleted.collectAsState(initial = false)
+                var splashDone by remember { mutableStateOf(false) }
 
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    DettoNavGraph(
-                        userPreferencesRepository = userPreferencesRepository,
-                        appRepository = appRepository,
-                        appSettings = appSettings,
-                        startDestination = if (onboardingCompleted) "home" else "onboarding"
-                    )
+                AnimatedContent(
+                    targetState = splashDone,
+                    transitionSpec = {
+                        fadeIn(tween(500, easing = FastOutSlowInEasing)) togetherWith
+                            fadeOut(tween(300, easing = FastOutSlowInEasing))
+                    },
+                    label = "splash_transition"
+                ) { done ->
+                    if (!done) {
+                        SplashScreen(onFinished = { splashDone = true })
+                    } else {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            DettoNavGraph(
+                                userPreferencesRepository = userPreferencesRepository,
+                                appRepository = appRepository,
+                                appSettings = appSettings,
+                                startDestination = if (onboardingCompleted) "home" else "onboarding"
+                            )
+                        }
+                    }
                 }
             }
         }
