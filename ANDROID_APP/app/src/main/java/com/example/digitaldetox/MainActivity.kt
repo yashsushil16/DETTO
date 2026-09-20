@@ -138,5 +138,21 @@ class MainActivity : ComponentActivity() {
             ExistingPeriodicWorkPolicy.UPDATE,
             dailyWorkRequest
         )
+
+        // SyncWorker: Run every 15 minutes, but ONLY when network is connected.
+        // This ensures the app works offline and syncs immediately once back online.
+        val syncConstraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .build()
+            
+        val syncWorkRequest = PeriodicWorkRequestBuilder<com.example.digitaldetox.worker.SyncWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(syncConstraints)
+            .build()
+            
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "CloudSyncWorker",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            syncWorkRequest
+        )
     }
 }

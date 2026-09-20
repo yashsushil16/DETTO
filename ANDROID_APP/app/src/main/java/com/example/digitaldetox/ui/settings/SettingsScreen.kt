@@ -151,6 +151,64 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // ── Cloud Sync ──
+            var showAuthDialog by remember { mutableStateOf(false) }
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+            var currentUser by remember { mutableStateOf(auth.currentUser) }
+
+            if (showAuthDialog) {
+                AuthDialog(
+                    onDismiss = { showAuthDialog = false },
+                    onSuccess = {
+                        showAuthDialog = false
+                        currentUser = auth.currentUser
+                        // Trigger immediate sync
+                        val syncWorkRequest = androidx.work.OneTimeWorkRequestBuilder<com.example.digitaldetox.worker.SyncWorker>().build()
+                        androidx.work.WorkManager.getInstance(context).enqueue(syncWorkRequest)
+                    }
+                )
+            }
+
+            Text("Cloud Dashboard", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            Spacer(modifier = Modifier.height(12.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                if (currentUser != null) "Logged in as ${currentUser?.email}" else "Sync Offline Data",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                if (currentUser != null) "Data syncs every 15m in the background." else "Login to sync stats to the web dashboard.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        if (currentUser != null) {
+                            Button(onClick = {
+                                auth.signOut()
+                                currentUser = null
+                            }) {
+                                Text("Logout")
+                            }
+                        } else {
+                            Button(onClick = { showAuthDialog = true }) {
+                                Text("Login")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // ── App Behavior ──
             Text("Behavior", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             Spacer(modifier = Modifier.height(12.dp))
