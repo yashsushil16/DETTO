@@ -105,7 +105,7 @@ class AccessibilityBlockerService : AccessibilityService() {
 
     /**
      * Returns today's foreground usage in milliseconds for the given package,
-     * using UsageStatsManager (requires PACKAGE_USAGE_STATS permission).
+     * using exact UsageEvents to ensure real-time accuracy (requires PACKAGE_USAGE_STATS permission).
      */
     private fun getTodayUsageMs(packageName: String): Long {
         return try {
@@ -121,13 +121,32 @@ class AccessibilityBlockerService : AccessibilityService() {
             val startOfDay = calendar.timeInMillis
             val now = System.currentTimeMillis()
 
-            val stats = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY, startOfDay, now
-            )
+            var totalUsage = 0L
+            var lastEventTime = 0L
+            val events = usageStatsManager.queryEvents(startOfDay, now)
+            val event = android.app.usage.UsageEvents.Event()
 
-            stats?.filter { it.packageName == packageName }
-                ?.sumOf { it.totalTimeInForeground }
-                ?: 0L
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                if (event.packageName == packageName) {
+                    if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
+                        lastEventTime = event.timeStamp
+                    } else if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED ||
+                               event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_STOPPED) {
+                        if (lastEventTime > 0) {
+                            totalUsage += (event.timeStamp - lastEventTime)
+                            lastEventTime = 0L
+                        }
+                    }
+                }
+            }
+            
+            // If the app is currently open and running
+            if (lastEventTime > 0) {
+                totalUsage += (now - lastEventTime)
+            }
+            
+            totalUsage
         } catch (e: Exception) {
             Log.e(TAG, "Failed to query usage stats for $packageName", e)
             0L

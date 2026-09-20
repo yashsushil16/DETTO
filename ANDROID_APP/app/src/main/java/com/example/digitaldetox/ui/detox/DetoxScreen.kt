@@ -178,7 +178,7 @@ fun NumberSequenceGame(onFinish: () -> Unit) {
                                 Text(
                                     if (tapped) "✓" else num.toString(),
                                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = if (tapped) Color.Gray else Color.White
+                                    color = if (tapped) Color.Gray else MaterialTheme.colorScheme.onPrimary
                                 )
                             }
                         }
@@ -334,7 +334,7 @@ fun PatternMemoryGame(onFinish: () -> Unit) {
         if (phase != "input") return
         val newInput = playerInput + tile
         playerInput = newInput
-        if (newInput[newInput.lastIndex] != pattern[newInput.lastIndex - 1]) {
+        if (newInput[newInput.lastIndex] != pattern[newInput.lastIndex]) {
             phase = "wrong"
         } else if (newInput.size == pattern.size) {
             phase = "correct"
