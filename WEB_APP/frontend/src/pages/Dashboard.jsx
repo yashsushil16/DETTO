@@ -44,11 +44,14 @@ export default function Dashboard() {
   const chartData = useMemo(() => {
     if (!analyticsList.length) return [];
     
+    const dailyRecords = analyticsList.filter(a => !a.recordType || a.recordType === 'daily');
+    const weeklyRecordsDb = analyticsList.filter(a => a.recordType === 'weekly');
+    
     // Sort chronological for charts
-    const sorted = [...analyticsList].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedDaily = [...dailyRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
 
     if (timeRange === 'Daily') {
-      return sorted.slice(-14).map(item => ({
+      return sortedDaily.slice(-14).map(item => ({
         label: item.date.substring(5), // MM-DD
         focus: item.distractionFreeTimeMs / (1000 * 60 * 60),
         distraction: item.distractiveTimeMs / (1000 * 60 * 60),
@@ -56,29 +59,53 @@ export default function Dashboard() {
     }
 
     if (timeRange === 'Weekly') {
-      // Group by week (roughly by ISO week or just 7-day chunks from the start)
+      // 1. Group recent daily records into weeks
       const weeklyMap = new Map();
-      sorted.forEach(item => {
+      sortedDaily.forEach(item => {
         const d = new Date(item.date);
-        // Get week start (Sunday)
-        d.setDate(d.getDate() - d.getDay());
-        const key = `${d.getMonth() + 1}/${d.getDate()}`;
+        d.setDate(d.getDate() - d.getDay()); // Start of week (Sunday)
+        const key = `${d.getFullYear()}-W${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (!weeklyMap.has(key)) weeklyMap.set(key, { count: 0, focus: 0, dist: 0 });
         const val = weeklyMap.get(key);
         val.count++;
         val.focus += item.distractionFreeTimeMs;
         val.dist += item.distractiveTimeMs;
       });
-      return Array.from(weeklyMap.entries()).map(([label, val]) => ({
-        label: `Wk of ${label}`,
-        focus: (val.focus / val.count) / (1000 * 60 * 60),
-        distraction: (val.dist / val.count) / (1000 * 60 * 60),
-      })).slice(-8); // last 8 weeks
+
+      // 2. Add in the archived weekly records from the DB
+      weeklyRecordsDb.forEach(item => {
+        const key = item.date;
+        if (!weeklyMap.has(key)) weeklyMap.set(key, { count: 0, focus: 0, dist: 0 });
+        const val = weeklyMap.get(key);
+        // The DB 'daysArchived' might exist, but if not we assume 7
+        const count = item.daysArchived || 7;
+        val.count += count;
+        val.focus += item.distractionFreeTimeMs;
+        val.dist += item.distractiveTimeMs;
+      });
+
+      // Convert back to array, sort by week string, and format
+      const combined = Array.from(weeklyMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([label, val]) => {
+          // Label is YYYY-WMM-DD, convert to MM/DD
+          const parts = label.split('-W');
+          const shortLabel = parts[1] ? parts[1].replace('-', '/') : label;
+          return {
+            label: `Wk ${shortLabel}`,
+            focus: (val.focus / (val.count || 1)) / (1000 * 60 * 60),
+            distraction: (val.dist / (val.count || 1)) / (1000 * 60 * 60),
+          };
+        });
+      
+      return combined.slice(-8); // last 8 weeks
     }
 
     if (timeRange === 'Monthly') {
       const monthlyMap = new Map();
-      sorted.forEach(item => {
+      
+      // Process daily
+      sortedDaily.forEach(item => {
         const d = new Date(item.date);
         const key = d.toLocaleString('default', { month: 'short' });
         if (!monthlyMap.has(key)) monthlyMap.set(key, { count: 0, focus: 0, dist: 0 });
@@ -87,10 +114,28 @@ export default function Dashboard() {
         val.focus += item.distractionFreeTimeMs;
         val.dist += item.distractiveTimeMs;
       });
+
+      // Process weekly archives
+      weeklyRecordsDb.forEach(item => {
+        // item.date is YYYY-WMM-DD
+        const parts = item.date.split('-W');
+        let d = new Date();
+        if (parts.length === 2) {
+           const [month, day] = parts[1].split('-');
+           d = new Date(parseInt(parts[0]), parseInt(month)-1, parseInt(day));
+        }
+        const key = d.toLocaleString('default', { month: 'short' });
+        if (!monthlyMap.has(key)) monthlyMap.set(key, { count: 0, focus: 0, dist: 0 });
+        const val = monthlyMap.get(key);
+        val.count += (item.daysArchived || 7);
+        val.focus += item.distractionFreeTimeMs;
+        val.dist += item.distractiveTimeMs;
+      });
+
       return Array.from(monthlyMap.entries()).map(([label, val]) => ({
         label,
-        focus: (val.focus / val.count) / (1000 * 60 * 60),
-        distraction: (val.dist / val.count) / (1000 * 60 * 60),
+        focus: (val.focus / (val.count || 1)) / (1000 * 60 * 60),
+        distraction: (val.dist / (val.count || 1)) / (1000 * 60 * 60),
       })).slice(-12);
     }
     return [];
@@ -319,21 +364,24 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {(() => {
                   if (!analyticsList.length) return null;
-                  const sorted = [...analyticsList].sort((a, b) => new Date(a.date) - new Date(b.date));
+                  
+                  const dailyRecords = analyticsList.filter(a => !a.recordType || a.recordType === 'daily');
+                  const weeklyRecordsDb = analyticsList.filter(a => a.recordType === 'weekly');
+                  const sortedDaily = [...dailyRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
                   
                   // Aggregate app usage based on time range
                   let appMap = new Map();
                   let recordsCount = 1;
 
                   if (timeRange === 'Daily') {
-                    const todayData = sorted[sorted.length - 1];
+                    const todayData = sortedDaily[sortedDaily.length - 1];
                     if (todayData && todayData.appUsage) {
                       todayData.appUsage.forEach(app => {
                         appMap.set(app.packageName, { name: app.appName, usageMs: app.usageMs, limitMs: app.limitMs });
                       });
                     }
                   } else {
-                    const filtered = timeRange === 'Weekly' ? sorted.slice(-7) : sorted.slice(-30);
+                    const filtered = timeRange === 'Weekly' ? sortedDaily.slice(-7) : sortedDaily.slice(-30);
                     recordsCount = filtered.length || 1;
                     filtered.forEach(day => {
                       if (day.appUsage) {
@@ -346,6 +394,24 @@ export default function Dashboard() {
                         });
                       }
                     });
+
+                    // Add archived weekly usage
+                    if (weeklyRecordsDb.length > 0) {
+                      const weeklyFiltered = timeRange === 'Weekly' ? weeklyRecordsDb.slice(-1) : weeklyRecordsDb;
+                      weeklyFiltered.forEach(week => {
+                        const count = week.daysArchived || 7;
+                        recordsCount += count;
+                        if (week.appUsage) {
+                           week.appUsage.forEach(app => {
+                              if (!appMap.has(app.packageName)) {
+                                appMap.set(app.packageName, { name: app.appName, usageMs: 0, limitMs: app.limitMs });
+                              }
+                              const val = appMap.get(app.packageName);
+                              val.usageMs += app.usageMs;
+                           });
+                        }
+                      });
+                    }
                   }
 
                   const apps = Array.from(appMap.values());

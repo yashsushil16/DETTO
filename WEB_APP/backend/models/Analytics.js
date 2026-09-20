@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const analyticsSchema = new mongoose.Schema({
   uid: { type: String, required: true }, // Links to Firebase UID
-  date: { type: String, required: true }, // YYYY-MM-DD
+  date: { type: String, required: true }, // YYYY-MM-DD or Week ID
+  recordType: { type: String, enum: ['daily', 'weekly'], default: 'daily' },
   totalScreenTimeMs: { type: Number, default: 0 },
   distractiveTimeMs: { type: Number, default: 0 },
   distractionFreeTimeMs: { type: Number, default: 0 },
