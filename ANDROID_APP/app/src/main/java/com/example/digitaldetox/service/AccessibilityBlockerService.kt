@@ -77,6 +77,9 @@ class AccessibilityBlockerService : AccessibilityService() {
 
             val trackedApp = trackedAppsMap[packageName] ?: return
 
+            // Skip if the user has toggled off monitoring for this app
+            if (!trackedApp.isMonitored) return
+
             // ── TIME LIMIT CHECK ──────────────────────────────────────────────
             // Only show the overlay if the app (or global) time limit has been reached.
             val todayUsageMs = getTodayUsageMs(packageName)
