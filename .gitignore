@@ -23,3 +23,8 @@ local.properties
 # Temporary / OS
 Thumbs.db
 Desktop.ini
+
+WEB_APP/backend/node_modules/
+WEB_APP/frontend/node_modules/
+WEB_APP/backend/.env
+*.apk
