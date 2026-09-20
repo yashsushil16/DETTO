@@ -163,11 +163,6 @@ export default function Dashboard() {
               <div className="flex flex-col md:flex-row items-center justify-between gap-12">
                 
                 <div className="flex-1 max-w-2xl z-10">
-                  <div className="inline-flex items-center space-x-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-6 backdrop-blur-md">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    <span className="text-[10px] font-medium tracking-[0.2em] uppercase text-white/80">Live Sync Active</span>
-                  </div>
-                  
                   <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.1] mb-6">
                     Your Digital Detox Garden
                   </h1>
@@ -311,6 +306,85 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
+              </div>
+            </motion.div>
+
+            {/* App Usage Details Area */}
+            <motion.div variants={fadeUp} className="mb-24">
+              <div className="flex flex-col mb-8">
+                <h2 className="text-xl font-medium text-white tracking-wide mb-2">Tracked Applications</h2>
+                <p className="text-sm text-white/50">Time spent on restricted apps.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {(() => {
+                  if (!analyticsList.length) return null;
+                  const sorted = [...analyticsList].sort((a, b) => new Date(a.date) - new Date(b.date));
+                  
+                  // Aggregate app usage based on time range
+                  let appMap = new Map();
+                  let recordsCount = 1;
+
+                  if (timeRange === 'Daily') {
+                    const todayData = sorted[sorted.length - 1];
+                    if (todayData && todayData.appUsage) {
+                      todayData.appUsage.forEach(app => {
+                        appMap.set(app.packageName, { name: app.appName, usageMs: app.usageMs, limitMs: app.limitMs });
+                      });
+                    }
+                  } else {
+                    const filtered = timeRange === 'Weekly' ? sorted.slice(-7) : sorted.slice(-30);
+                    recordsCount = filtered.length || 1;
+                    filtered.forEach(day => {
+                      if (day.appUsage) {
+                        day.appUsage.forEach(app => {
+                          if (!appMap.has(app.packageName)) {
+                            appMap.set(app.packageName, { name: app.appName, usageMs: 0, limitMs: app.limitMs });
+                          }
+                          const val = appMap.get(app.packageName);
+                          val.usageMs += app.usageMs;
+                        });
+                      }
+                    });
+                  }
+
+                  const apps = Array.from(appMap.values());
+                  if (apps.length === 0) {
+                    return (
+                      <div className="col-span-1 md:col-span-2 p-10 bg-white/5 border border-white/10 rounded-2xl text-center text-white/50">
+                        No app usage data recorded for this period.
+                      </div>
+                    );
+                  }
+
+                  return apps.sort((a,b) => b.usageMs - a.usageMs).map((app, idx) => {
+                    const avgUsageMs = timeRange === 'Daily' ? app.usageMs : app.usageMs / recordsCount;
+                    const hours = Math.floor(avgUsageMs / (1000 * 60 * 60));
+                    const mins = Math.floor((avgUsageMs / (1000 * 60)) % 60);
+                    
+                    const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+                    
+                    const progress = app.limitMs > 0 ? Math.min(100, (avgUsageMs / app.limitMs) * 100) : 0;
+                    const isWarning = progress > 80;
+
+                    return (
+                      <div key={idx} className="p-1 rounded-[1.5rem] bg-gradient-to-b from-white/10 to-transparent hover:from-white/15 transition-colors">
+                        <div className="bg-[#0A0A0A] rounded-[calc(1.5rem-4px)] border border-white/5 p-6 h-full flex flex-col justify-center">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="font-medium text-white truncate pr-4">{app.name}</span>
+                            <span className="text-sm font-semibold whitespace-nowrap text-white/80">{timeStr}</span>
+                          </div>
+                          <div className="w-full bg-[#1A1A1A] rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${isWarning ? 'bg-red-500' : 'bg-white'}`} 
+                              style={{ width: `${progress}%` }} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </motion.div>
 
