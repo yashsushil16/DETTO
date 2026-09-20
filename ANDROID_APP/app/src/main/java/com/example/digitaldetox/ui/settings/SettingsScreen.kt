@@ -204,6 +204,29 @@ fun SettingsScreen(
                             }
                         }
                     }
+                    
+                    if (currentUser != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://detto-app.vercel.app"))
+                                    context.startActivity(intent)
+                                }
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                "Click to view Web Dashboard",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                )
+                            )
+                        }
+                    }
                 }
             }
 
