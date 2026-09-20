@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -61,9 +60,6 @@ fun AppsScreen(
             onDismiss = { showTimerDialog = false },
             onConfirm = { limitMs ->
                 viewModel.setAppDailyLimit(selectedApp!!, limitMs)
-                if (!selectedApp!!.isTracked) {
-                    viewModel.toggleAppTracking(selectedApp!!)
-                }
                 showTimerDialog = false
             }
         )
@@ -104,9 +100,9 @@ fun AppsScreen(
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Monitored Apps", style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Black))
+                Text("Selected Apps", style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Black))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Toggle tracking. Tap ⏱ to set a custom daily limit.", style = MaterialTheme.typography.bodyMedium)
+                Text("Toggle monitoring on/off. Tap + to add or remove apps.", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Search Bar
@@ -124,7 +120,7 @@ fun AppsScreen(
 
                 if (filteredApps.isEmpty() && searchQuery.isBlank()) {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        Text("No apps monitored yet. Tap + to add.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                        Text("No apps selected yet. Tap + to add.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                     }
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -136,8 +132,11 @@ fun AppsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(appItem.appName, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
-                                        if (appItem.isTracked && appItem.dailyLimitMs > 0L) {
+                                        Text(
+                                            appItem.appName,
+                                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                                        )
+                                        if (appItem.dailyLimitMs > 0L) {
                                             val h = appItem.dailyLimitMs / (1000 * 60 * 60)
                                             val m = (appItem.dailyLimitMs / (1000 * 60)) % 60
                                             Text(
@@ -145,15 +144,15 @@ fun AppsScreen(
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
-                                        } else if (appItem.isTracked) {
+                                        } else {
                                             Text(
-                                                "Using global limit",
+                                                if (appItem.isMonitored) "Monitoring active" else "Monitoring paused",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                color = if (appItem.isMonitored) MaterialTheme.colorScheme.primary else Color.Gray
                                             )
                                         }
                                     }
-    
+
                                     // Timer button
                                     TextButton(
                                         onClick = {
@@ -164,16 +163,17 @@ fun AppsScreen(
                                         Text(
                                             "⏱",
                                             style = MaterialTheme.typography.titleLarge,
-                                            color = if (appItem.dailyLimitMs > 0L && appItem.isTracked)
+                                            color = if (appItem.dailyLimitMs > 0L)
                                                 MaterialTheme.colorScheme.primary
                                             else
                                                 MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-    
+
+                                    // Monitoring toggle — stays in list, just pauses monitoring
                                     Switch(
-                                        checked = appItem.isTracked,
-                                        onCheckedChange = { viewModel.toggleAppTracking(appItem) }
+                                        checked = appItem.isMonitored,
+                                        onCheckedChange = { viewModel.toggleMonitoring(appItem) }
                                     )
                                 }
                             }
@@ -250,9 +250,10 @@ fun AppSelectionDialog(
                                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                                         modifier = Modifier.weight(1f)
                                     )
+                                    // In Add Apps dialog, toggle = add/remove from list
                                     Switch(
                                         checked = appItem.isTracked,
-                                        onCheckedChange = { viewModel.toggleAppTracking(appItem) }
+                                        onCheckedChange = { viewModel.toggleAppInList(appItem) }
                                     )
                                 }
                             }

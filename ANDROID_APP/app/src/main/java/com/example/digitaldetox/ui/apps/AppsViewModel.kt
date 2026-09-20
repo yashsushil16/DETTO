@@ -15,8 +15,11 @@ import kotlinx.coroutines.launch
 data class AppItem(
     val packageName: String,
     val appName: String,
+    /** True = this app is in the user's pinned/selected list */
     val isTracked: Boolean,
-    val dailyLimitMs: Long = 0L // 0 = use global limit
+    /** True = monitoring/blocking is active for this app */
+    val isMonitored: Boolean,
+    val dailyLimitMs: Long = 0L
 )
 
 class AppsViewModel(
@@ -24,9 +27,11 @@ class AppsViewModel(
     private val context: Context
 ) : ViewModel() {
 
+    // Full installed apps list — loaded lazily only when Add Apps dialog opens
     private val _installedApps = MutableStateFlow<List<AppItem>>(emptyList())
     val installedApps: StateFlow<List<AppItem>> = _installedApps.asStateFlow()
 
+    // Only apps in the user's pinned list (in DB) — shown in the main Apps screen
     private val _trackedApps = MutableStateFlow<List<AppItem>>(emptyList())
     val trackedApps: StateFlow<List<AppItem>> = _trackedApps.asStateFlow()
 
@@ -38,16 +43,18 @@ class AppsViewModel(
                         packageName = entity.packageName,
                         appName = entity.displayName,
                         isTracked = true,
+                        isMonitored = entity.isMonitored,
                         dailyLimitMs = entity.dailyLimitMs
                     )
                 }.sortedBy { it.appName }
-                
-                // If installedApps is already loaded, update their tracked status too
+
+                // Keep the full app list in sync if it's already loaded
                 if (_installedApps.value.isNotEmpty()) {
                     val trackedMap = trackedList.associateBy { it.packageName }
                     _installedApps.value = _installedApps.value.map { app ->
                         app.copy(
                             isTracked = trackedMap.containsKey(app.packageName),
+                            isMonitored = trackedMap[app.packageName]?.isMonitored ?: false,
                             dailyLimitMs = trackedMap[app.packageName]?.dailyLimitMs ?: 0L
                         )
                     }
@@ -56,47 +63,60 @@ class AppsViewModel(
         }
     }
 
+    /** Load all installed apps — called lazily when the Add Apps dialog opens */
     fun loadAllApps() {
-        if (_installedApps.value.isNotEmpty()) return // Already loaded
+        if (_installedApps.value.isNotEmpty()) return
 
         viewModelScope.launch {
             val pm = context.packageManager
             val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
             val trackedMap = _trackedApps.value.associateBy { it.packageName }
-            
-            val knownDistractive = listOf("instagram", "facebook", "reddit", "tiktok", "twitter", "snapchat", "youtube")
-            
-            val userApps = packages.filter { 
-                (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || 
-                knownDistractive.any { name -> it.packageName.contains(name) }
+
+            val knownDistractive = listOf(
+                "instagram", "facebook", "reddit", "tiktok",
+                "twitter", "snapchat", "youtube"
+            )
+
+            val userApps = packages.filter {
+                (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 ||
+                    knownDistractive.any { name -> it.packageName.contains(name) }
             }.map { appInfo ->
                 AppItem(
                     packageName = appInfo.packageName,
                     appName = pm.getApplicationLabel(appInfo).toString(),
                     isTracked = trackedMap.containsKey(appInfo.packageName),
+                    isMonitored = trackedMap[appInfo.packageName]?.isMonitored ?: false,
                     dailyLimitMs = trackedMap[appInfo.packageName]?.dailyLimitMs ?: 0L
                 )
-            }.sortedWith(compareByDescending<AppItem> { app -> 
-                knownDistractive.any { name -> app.packageName.contains(name) }
-            }.thenBy { it.appName })
+            }.sortedWith(
+                compareByDescending<AppItem> { app ->
+                    knownDistractive.any { name -> app.packageName.contains(name) }
+                }.thenBy { it.appName }
+            )
 
             _installedApps.value = userApps
         }
     }
 
-    fun toggleAppTracking(appItem: AppItem) {
+    /**
+     * Used in the ADD APPS dialog.
+     * Adds the app to the pinned list (DB), or removes it entirely.
+     */
+    fun toggleAppInList(appItem: AppItem) {
         viewModelScope.launch {
             if (appItem.isTracked) {
+                // Remove from DB entirely
                 appRepository.deleteTrackedApp(
                     TrackedAppEntity(
                         packageName = appItem.packageName,
                         displayName = appItem.appName,
-                        isMonitored = true,
+                        isMonitored = appItem.isMonitored,
                         isRestricted = true,
                         dailyLimitMs = appItem.dailyLimitMs
                     )
                 )
             } else {
+                // Add to DB with monitoring enabled by default
                 appRepository.addTrackedApp(
                     TrackedAppEntity(
                         packageName = appItem.packageName,
@@ -110,14 +130,31 @@ class AppsViewModel(
         }
     }
 
+    /**
+     * Used in the MAIN Apps screen.
+     * Keeps the app in the pinned list but flips its monitoring on/off.
+     */
+    fun toggleMonitoring(appItem: AppItem) {
+        viewModelScope.launch {
+            appRepository.updateTrackedApp(
+                TrackedAppEntity(
+                    packageName = appItem.packageName,
+                    displayName = appItem.appName,
+                    isMonitored = !appItem.isMonitored,
+                    isRestricted = true,
+                    dailyLimitMs = appItem.dailyLimitMs
+                )
+            )
+        }
+    }
+
     fun setAppDailyLimit(appItem: AppItem, limitMs: Long) {
         viewModelScope.launch {
-            // Ensure the app is tracked before setting a limit; insert if needed
             appRepository.addTrackedApp(
                 TrackedAppEntity(
                     packageName = appItem.packageName,
                     displayName = appItem.appName,
-                    isMonitored = true,
+                    isMonitored = appItem.isMonitored,
                     isRestricted = true,
                     dailyLimitMs = limitMs
                 )

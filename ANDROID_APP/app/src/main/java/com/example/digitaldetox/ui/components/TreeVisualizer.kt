@@ -19,22 +19,24 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
-// High-contrast, elegant monochrome palette for dark OLED theme
-private val TRUNK_BASE = Color(0xFF505050)
-private val TRUNK_MAIN = Color(0xFF7A7A7A)
-private val TRUNK_HIGHLIGHT = Color(0xFFA0A0A0)
+// ── Monochrome Palette ──
+private val TRUNK_BASE      = Color(0xFF404040)
+private val TRUNK_MAIN      = Color(0xFF6A6A6A)
+private val TRUNK_MID       = Color(0xFF8A8A8A)
+private val TRUNK_HIGHLIGHT = Color(0xFFB0B0B0)
 
-private val SOIL_BASE = Color(0xFF1E1E1E)
-private val SOIL_MID = Color(0xFF2C2C2C)
-private val SOIL_SURFACE = Color(0xFF424242)
-private val SOIL_HIGHLIGHT = Color(0xFF6E6E6E)
+private val SOIL_BASE       = Color(0xFF1A1A1A)
+private val SOIL_MID        = Color(0xFF2C2C2C)
+private val SOIL_SURFACE    = Color(0xFF424242)
+private val SOIL_HIGHLIGHT  = Color(0xFF6E6E6E)
 
-private val CANOPY_SHADOW = Color(0xFF383838)
-private val CANOPY_DEEP = Color(0xFF656565)
-private val CANOPY_MID = Color(0xFF909090)
-private val CANOPY_LIGHT = Color(0xFFCCCCCC)
-private val CANOPY_WHITE = Color(0xFFFFFFFF)
-private val GLOW_WHITE = Color(0x33FFFFFF)
+private val CANOPY_DARKEST  = Color(0xFF2E2E2E)
+private val CANOPY_SHADOW   = Color(0xFF3E3E3E)
+private val CANOPY_DARK     = Color(0xFF555555)
+private val CANOPY_MID      = Color(0xFF888888)
+private val CANOPY_LIGHT    = Color(0xFFBBBBBB)
+private val CANOPY_HILIGHT  = Color(0xFFDDDDDD)
+private val CANOPY_WHITE    = Color(0xFFFFFFFF)
 
 @Composable
 fun TreeVisualizer(
@@ -43,8 +45,7 @@ fun TreeVisualizer(
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "tree_anim")
-    
-    // Gentle organic swaying
+
     val swayAngle by infiniteTransition.animateFloat(
         initialValue = -1.2f,
         targetValue = 1.2f,
@@ -55,10 +56,9 @@ fun TreeVisualizer(
         label = "sway"
     )
 
-    // Breathing glow phase
     val glowPulse by infiniteTransition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.25f,
+        initialValue = 0.82f,
+        targetValue = 1.28f,
         animationSpec = infiniteRepeatable(
             animation = tween(2800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -66,10 +66,19 @@ fun TreeVisualizer(
         label = "glow"
     )
 
-    // Subtle seed pulse
+    val particleAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(8000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "particle"
+    )
+
     val seedBreath by infiniteTransition.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.04f,
+        initialValue = 0.94f,
+        targetValue = 1.06f,
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -79,382 +88,514 @@ fun TreeVisualizer(
 
     Canvas(modifier = modifier.fillMaxSize()) {
         if (size.width <= 0 || size.height <= 0) return@Canvas
-
         val rootX = size.width * 0.5f
-        val hr = healthRatio.coerceIn(0.6f, 1.3f)
+        val hr = healthRatio.coerceIn(0.5f, 1.3f)
 
         if (stage == "Seed") {
-            // For Seed stage, center the soil bed nicely in the middle
             val seedY = size.height * 0.62f
-            val baseDimension = min(size.width * 0.85f, size.height * 0.7f)
-            val s = (baseDimension / 240f) * hr
-            drawDetailedSeedWithGround(rootX, seedY, s, glowPulse, seedBreath)
+            val baseDim = min(size.width * 0.85f, size.height * 0.7f)
+            val s = (baseDim / 240f) * hr
+            drawDetailedSeedWithGround(rootX, seedY, s, glowPulse, seedBreath, particleAngle)
         } else {
             val rootY = size.height * 0.84f
-            val baseDimension = min(size.width * 0.85f, size.height * 0.75f)
-            val s = (baseDimension / 260f) * hr
+            val baseDim = min(size.width * 0.85f, size.height * 0.75f)
+            val s = (baseDim / 260f) * hr
 
-            // Draw soft ground mound / pedestal
             drawGroundMound(rootX, rootY, 110f * s, s)
 
             when (stage) {
-                "Sprout" -> drawDetailedSprout(rootX, rootY, swayAngle, s, glowPulse)
-                "Plant" -> drawDetailedPlant(rootX, rootY, swayAngle, s, glowPulse)
-                "Garden" -> drawDetailedGarden(rootX, rootY, swayAngle, s, glowPulse)
-                "Forest" -> drawDetailedForest(rootX, rootY, swayAngle, s, glowPulse)
-                else -> drawDetailedTree(rootX, rootY, swayAngle, s, glowPulse, 1f) // "Tree"
+                "Sprout" -> drawDetailedSprout(rootX, rootY, swayAngle, s, glowPulse, particleAngle)
+                "Plant"  -> drawDetailedPlant(rootX, rootY, swayAngle, s, glowPulse, particleAngle)
+                "Garden" -> drawDetailedGarden(rootX, rootY, swayAngle, s, glowPulse, particleAngle)
+                "Forest" -> drawDetailedForest(rootX, rootY, swayAngle, s, glowPulse, particleAngle)
+                else     -> drawDetailedTree(rootX, rootY, swayAngle, s, glowPulse, particleAngle, 1f)
             }
         }
     }
 }
 
-// ── Ground / Soil Layer Helper ──
-private fun DrawScope.drawGroundMound(x: Float, y: Float, radius: Float, s: Float) {
-    // Deep base glow
-    drawOval(
-        brush = Brush.radialGradient(
-            colors = listOf(Color(0x30FFFFFF), Color(0x00000000)),
-            center = Offset(x, y + 4f * s),
-            radius = radius * 1.3f
-        ),
-        topLeft = Offset(x - radius * 1.3f, y - 10f * s),
-        size = Size(radius * 2.6f, 30f * s)
-    )
-
-    // Soil mound curve
-    val moundPath = Path().apply {
-        moveTo(x - radius, y + 6f * s)
-        cubicTo(x - radius * 0.6f, y - 8f * s, x + radius * 0.6f, y - 8f * s, x + radius, y + 6f * s)
-        cubicTo(x + radius * 0.5f, y + 14f * s, x - radius * 0.5f, y + 14f * s, x - radius, y + 6f * s)
-        close()
-    }
-    drawPath(moundPath, SOIL_BASE, style = Fill)
-    drawPath(moundPath, SOIL_SURFACE, style = Stroke(width = 1.8f * s))
-
-    // Zen pebbles / soil highlights
-    drawCircle(SOIL_HIGHLIGHT, 2.5f * s, Offset(x - radius * 0.45f, y + 2f * s))
-    drawCircle(SOIL_HIGHLIGHT, 3.2f * s, Offset(x + radius * 0.35f, y + 1f * s))
-    drawCircle(SOIL_SURFACE, 2f * s, Offset(x - radius * 0.15f, y + 5f * s))
-    drawCircle(SOIL_HIGHLIGHT, 2.2f * s, Offset(x + radius * 0.6f, y + 4f * s))
-}
-
-// ── Stage 1: Seed in Ground Bed ──
-private fun DrawScope.drawDetailedSeedWithGround(
-    x: Float,
-    y: Float,
-    s: Float,
-    glow: Float,
-    breath: Float
+// ═══════════════════════════════════════════════════════
+// GLOW ORB — drawn BEHIND the tree at a given center
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawGlowOrb(
+    cx: Float, cy: Float,
+    baseRadius: Float,
+    pulse: Float,
+    particleAngle: Float,
+    particleCount: Int = 6
 ) {
-    val soilWidth = 140f * s
-    val soilHeight = 36f * s
+    val r = baseRadius * pulse
 
-    // 1. Ambient soft aura around soil and seed
+    // Outermost wisp — very faint corona
+    drawCircle(Color(0x08FFFFFF), r * 2.6f, Offset(cx, cy))
+    // Wide soft halo
+    drawCircle(Color(0x10FFFFFF), r * 2.0f, Offset(cx, cy))
+    // Medium ring
+    drawCircle(Color(0x18FFFFFF), r * 1.5f, Offset(cx, cy))
+    // Inner bright ring
+    drawCircle(Color(0x28FFFFFF), r * 1.15f, Offset(cx, cy))
+    // Core bright nucleus
+    drawCircle(Color(0x40FFFFFF), r * 0.72f, Offset(cx, cy))
+    // Hot center
+    drawCircle(Color(0x60FFFFFF), r * 0.38f, Offset(cx, cy))
+
+    // Concentric ring outlines for depth
+    drawCircle(Color(0x12FFFFFF), r * 1.75f, Offset(cx, cy),
+        style = Stroke(width = r * 0.04f))
+    drawCircle(Color(0x18FFFFFF), r * 1.3f, Offset(cx, cy),
+        style = Stroke(width = r * 0.03f))
+
+    // Orbiting spore particles
+    for (i in 0 until particleCount) {
+        val angle = Math.toRadians((particleAngle + (360f / particleCount) * i).toDouble())
+        val orbitR = r * 1.5f
+        val px = cx + orbitR * cos(angle).toFloat()
+        val py = cy + orbitR * sin(angle).toFloat()
+        val pSize = r * 0.07f * (0.6f + 0.4f * ((i % 3).toFloat() / 2f))
+        drawCircle(Color(0x55FFFFFF), pSize, Offset(px, py))
+        drawCircle(Color(0x30FFFFFF), pSize * 1.8f, Offset(px, py))
+    }
+
+    // Counter-rotating spores on tighter orbit
+    for (i in 0 until (particleCount / 2)) {
+        val angle = Math.toRadians((-particleAngle * 0.6f + (360f / (particleCount / 2)) * i).toDouble())
+        val orbitR = r * 1.1f
+        val px = cx + orbitR * cos(angle).toFloat()
+        val py = cy + orbitR * sin(angle).toFloat()
+        drawCircle(Color(0x40FFFFFF), r * 0.045f, Offset(px, py))
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// FOLIAGE SPHERE — reference-image quality 3D shading
+// Multiple layers: shadow base → mid tones → bright top-left highlight → specular
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawFoliageSphere(cx: Float, cy: Float, r: Float) {
+    // Drop shadow ellipse beneath sphere
     drawOval(
+        color = Color(0x40000000),
+        topLeft = Offset(cx - r * 0.9f, cy + r * 0.7f),
+        size = Size(r * 1.8f, r * 0.4f)
+    )
+
+    // Base fill — darkest
+    drawCircle(CANOPY_DARKEST, r, Offset(cx, cy))
+
+    // Lower hemisphere shadow gradient (bottom-right darker)
+    drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(Color(0x28FFFFFF), Color(0x08FFFFFF), Color(0x00000000)),
-            center = Offset(x, y - 10f * s),
-            radius = 160f * s * glow
+            0f to Color(0x00000000),
+            0.5f to Color(0x20000000),
+            1f to Color(0x60000000),
+            center = Offset(cx + r * 0.2f, cy + r * 0.2f),
+            radius = r
         ),
-        topLeft = Offset(x - 160f * s, y - 100f * s),
-        size = Size(320f * s, 200f * s)
+        radius = r,
+        center = Offset(cx, cy)
     )
 
-    // 2. Soil Bed (Layered Zen Planter / Ground Mound)
-    // Soil Bed Base Shadow
-    drawOval(
-        color = Color(0x60000000),
-        topLeft = Offset(x - soilWidth * 1.05f, y + 8f * s),
-        size = Size(soilWidth * 2.1f, soilHeight * 0.9f)
+    // Mid-tone fill (main body colour)
+    drawCircle(CANOPY_DARK, r * 0.88f, Offset(cx - r * 0.05f, cy - r * 0.02f))
+    drawCircle(CANOPY_MID,  r * 0.72f, Offset(cx - r * 0.08f, cy - r * 0.06f))
+
+    // Leaf texture lines (vein-like arcs)
+    val veins = listOf(
+        Pair(Offset(cx - r * 0.3f, cy - r * 0.35f), Offset(cx + r * 0.25f, cy + r * 0.15f)),
+        Pair(Offset(cx - r * 0.1f, cy - r * 0.4f),  Offset(cx + r * 0.35f, cy + r * 0.3f)),
+        Pair(Offset(cx - r * 0.4f, cy - r * 0.1f),  Offset(cx + r * 0.1f,  cy + r * 0.4f))
     )
-
-    // Soil Mound Path
-    val soilPath = Path().apply {
-        moveTo(x - soilWidth, y + 12f * s)
-        cubicTo(x - soilWidth * 0.6f, y - 14f * s, x + soilWidth * 0.6f, y - 14f * s, x + soilWidth, y + 12f * s)
-        cubicTo(x + soilWidth * 0.7f, y + 24f * s, x - soilWidth * 0.7f, y + 24f * s, x - soilWidth, y + 12f * s)
-        close()
+    for ((a, b) in veins) {
+        val veinPath = Path().apply {
+            moveTo(a.x, a.y)
+            quadraticBezierTo(cx, cy, b.x, b.y)
+        }
+        drawPath(veinPath, Color(0x18000000), style = Stroke(width = r * 0.04f, cap = StrokeCap.Round))
+        drawPath(veinPath, Color(0x10FFFFFF), style = Stroke(width = r * 0.025f, cap = StrokeCap.Round))
     }
-    drawPath(soilPath, SOIL_MID, style = Fill)
 
-    // Soil Rim / Surface Line
-    val rimPath = Path().apply {
-        moveTo(x - soilWidth * 0.95f, y + 10f * s)
-        cubicTo(x - soilWidth * 0.55f, y - 12f * s, x + soilWidth * 0.55f, y - 12f * s, x + soilWidth * 0.95f, y + 10f * s)
-    }
-    drawPath(rimPath, SOIL_HIGHLIGHT, style = Stroke(width = 2.2f * s, cap = StrokeCap.Round))
+    // Top-left bright highlight (simulates light source)
+    drawCircle(CANOPY_LIGHT,  r * 0.45f, Offset(cx - r * 0.22f, cy - r * 0.26f))
+    drawCircle(CANOPY_HILIGHT, r * 0.28f, Offset(cx - r * 0.28f, cy - r * 0.32f))
+    // Specular hot-spot
+    drawCircle(CANOPY_WHITE,  r * 0.14f, Offset(cx - r * 0.32f, cy - r * 0.38f))
+    drawCircle(Color(0x88FFFFFF), r * 0.07f, Offset(cx - r * 0.34f, cy - r * 0.41f))
 
-    // Decorative Zen stones in the soil bed
-    drawCircle(SOIL_HIGHLIGHT, 4.5f * s, Offset(x - soilWidth * 0.5f, y + 2f * s))
-    drawCircle(SOIL_SURFACE, 3.5f * s, Offset(x - soilWidth * 0.35f, y + 8f * s))
-    drawCircle(SOIL_HIGHLIGHT, 5f * s, Offset(x + soilWidth * 0.45f, y + 4f * s))
-    drawCircle(SOIL_SURFACE, 3f * s, Offset(x + soilWidth * 0.65f, y + 6f * s))
-
-    // 3. Root tendrils growing into the soil
-    val root1 = Path().apply {
-        moveTo(x, y + 2f * s)
-        cubicTo(x - 8f * s, y + 14f * s, x - 18f * s, y + 20f * s, x - 26f * s, y + 24f * s)
-    }
-    drawPath(root1, TRUNK_HIGHLIGHT, style = Stroke(width = 2f * s, cap = StrokeCap.Round))
-
-    val root2 = Path().apply {
-        moveTo(x + 2f * s, y + 3f * s)
-        cubicTo(x + 6f * s, y + 12f * s, x + 15f * s, y + 18f * s, x + 24f * s, y + 22f * s)
-    }
-    drawPath(root2, TRUNK_HIGHLIGHT, style = Stroke(width = 1.8f * s, cap = StrokeCap.Round))
-
-    // 4. The Seed (Nestled in the soil center, pulsating with life)
-    val seedScale = s * 1.5f * breath
-    val seedCenterX = x
-    val seedCenterY = y - 4f * s
-
-    // Seed back glow
-    drawCircle(Color(0x35FFFFFF), 35f * seedScale * glow, Offset(seedCenterX, seedCenterY))
-
-    // Seed Husk / Shell Path
-    val seedHusk = Path().apply {
-        moveTo(seedCenterX, seedCenterY - 18f * seedScale)
-        cubicTo(
-            seedCenterX + 16f * seedScale, seedCenterY - 14f * seedScale,
-            seedCenterX + 16f * seedScale, seedCenterY + 12f * seedScale,
-            seedCenterX, seedCenterY + 20f * seedScale
-        )
-        cubicTo(
-            seedCenterX - 16f * seedScale, seedCenterY + 12f * seedScale,
-            seedCenterX - 16f * seedScale, seedCenterY - 14f * seedScale,
-            seedCenterX, seedCenterY - 18f * seedScale
-        )
-        close()
-    }
-    drawPath(seedHusk, TRUNK_MAIN, style = Fill)
-    drawPath(seedHusk, CANOPY_LIGHT, style = Stroke(width = 2f * seedScale))
-
-    // Inner seed body (silver-white core)
-    val innerSeed = Path().apply {
-        moveTo(seedCenterX, seedCenterY - 12f * seedScale)
-        cubicTo(
-            seedCenterX + 9f * seedScale, seedCenterY - 8f * seedScale,
-            seedCenterX + 9f * seedScale, seedCenterY + 8f * seedScale,
-            seedCenterX, seedCenterY + 13f * seedScale
-        )
-        cubicTo(
-            seedCenterX - 9f * seedScale, seedCenterY + 8f * seedScale,
-            seedCenterX - 9f * seedScale, seedCenterY - 8f * seedScale,
-            seedCenterX, seedCenterY - 12f * seedScale
-        )
-        close()
-    }
-    drawPath(innerSeed, CANOPY_WHITE, style = Fill)
-
-    // 5. Emerging Sprout Shoot & Tender Leaves
-    val shootTipY = seedCenterY - 45f * seedScale
-    val shootPath = Path().apply {
-        moveTo(seedCenterX, seedCenterY - 14f * seedScale)
-        cubicTo(
-            seedCenterX - 4f * seedScale, seedCenterY - 26f * seedScale,
-            seedCenterX + 6f * seedScale, seedCenterY - 36f * seedScale,
-            seedCenterX + 2f * seedScale, shootTipY
-        )
-    }
-    drawPath(shootPath, CANOPY_WHITE, style = Stroke(width = 4f * seedScale, cap = StrokeCap.Round))
-
-    // Little Twin Seed Leaves (Cotyledons)
-    drawLeaf(seedCenterX - 10f * seedScale, shootTipY + 4f * seedScale, -40f, 18f * seedScale, CANOPY_WHITE)
-    drawLeaf(seedCenterX + 12f * seedScale, shootTipY + 2f * seedScale, 38f, 20f * seedScale, CANOPY_LIGHT)
-
-    // Glowing core particle
-    drawCircle(CANOPY_WHITE, 4f * seedScale * glow, Offset(seedCenterX, seedCenterY))
-    drawCircle(Color(0x50FFFFFF), 7f * seedScale * glow, Offset(seedCenterX, seedCenterY))
+    // Outer rim edge (subtle rim-light on bottom-right for depth)
+    drawCircle(CANOPY_MID, r, Offset(cx, cy), style = Stroke(width = r * 0.05f))
 }
 
-// ── Stage 2: Sprout ──
-private fun DrawScope.drawDetailedSprout(x: Float, y: Float, sway: Float, s: Float, glow: Float) {
-    val sproutScale = s * 1.4f
-    val tipX = x + sway * 2f
-    val tipY = y - 90f * sproutScale
-
-    // Organic stem
-    val stemPath = Path().apply {
-        moveTo(x, y)
-        cubicTo(x - 8f * sproutScale, y - 30f * sproutScale, tipX - 4f * sproutScale, y - 60f * sproutScale, tipX, tipY)
-    }
-    drawPath(stemPath, TRUNK_MAIN, style = Stroke(width = 6f * sproutScale, cap = StrokeCap.Round))
-
-    // Lower leaves
-    drawLeaf(x - 22f * sproutScale, y - 45f * sproutScale, -50f, 22f * sproutScale, CANOPY_MID)
-    drawLeaf(x + 24f * sproutScale, y - 55f * sproutScale, 45f, 24f * sproutScale, CANOPY_LIGHT)
-    
-    // Upper canopy cluster
-    drawCircle(CANOPY_DEEP, 24f * sproutScale, Offset(tipX - 10f * sproutScale, tipY + 8f * sproutScale))
-    drawCircle(CANOPY_MID, 26f * sproutScale, Offset(tipX + 8f * sproutScale, tipY + 4f * sproutScale))
-    drawCircle(CANOPY_LIGHT, 22f * sproutScale, Offset(tipX, tipY - 10f * sproutScale))
-    drawCircle(CANOPY_WHITE, 16f * sproutScale, Offset(tipX - 2f * sproutScale, tipY - 16f * sproutScale))
-    
-    drawCircle(GLOW_WHITE, 40f * sproutScale * glow, Offset(tipX, tipY))
-}
-
-// ── Stage 3: Plant / Young Bonsai ──
-private fun DrawScope.drawDetailedPlant(x: Float, y: Float, sway: Float, s: Float, glow: Float) {
-    val plantScale = s * 1.25f
-    val trunkTopY = y - 130f * plantScale
-    val swayX = x + sway * 3f
-
-    // Trunk
-    drawTaperedTrunk(x, y, swayX, trunkTopY, 14f * plantScale, 7f * plantScale)
-
-    // Branches
-    val b1x = x + (swayX - x) * 0.5f
-    val b1y = y - 65f * plantScale
-    drawLine(TRUNK_MAIN, Offset(b1x, b1y), Offset(swayX - 45f * plantScale, trunkTopY + 30f * plantScale), strokeWidth = 6.5f * plantScale, cap = StrokeCap.Round)
-    drawLine(TRUNK_MAIN, Offset(b1x + 2f, b1y + 10f * plantScale), Offset(swayX + 42f * plantScale, trunkTopY + 25f * plantScale), strokeWidth = 6f * plantScale, cap = StrokeCap.Round)
-
-    // Foliage Clouds
-    drawCanopyCloud(swayX - 45f * plantScale, trunkTopY + 25f * plantScale, 32f * plantScale)
-    drawCanopyCloud(swayX + 42f * plantScale, trunkTopY + 20f * plantScale, 30f * plantScale)
-    drawCanopyCloud(swayX, trunkTopY - 15f * plantScale, 42f * plantScale)
-    
-    // Top highlight
-    drawCircle(CANOPY_WHITE, 20f * plantScale, Offset(swayX + 4f * plantScale, trunkTopY - 30f * plantScale))
-}
-
-// ── Stage 4: Majestic Full Tree (Synced with DETTO) ──
-private fun DrawScope.drawDetailedTree(x: Float, y: Float, sway: Float, s: Float, glow: Float, extraScale: Float) {
-    val treeScale = s * extraScale
-    val swayX = x + sway * 3.5f
-    val trunkTopY = y - 160f * treeScale
-
-    // 1. Root flare
-    val rootL = Path().apply {
-        moveTo(x - 22f * treeScale, y)
-        cubicTo(x - 30f * treeScale, y + 2f * treeScale, x - 42f * treeScale, y + 8f * treeScale, x - 48f * treeScale, y + 10f * treeScale)
-    }
-    drawPath(rootL, TRUNK_BASE, style = Stroke(width = 8f * treeScale, cap = StrokeCap.Round))
-    
-    val rootR = Path().apply {
-        moveTo(x + 22f * treeScale, y)
-        cubicTo(x + 30f * treeScale, y + 2f * treeScale, x + 40f * treeScale, y + 7f * treeScale, x + 46f * treeScale, y + 9f * treeScale)
-    }
-    drawPath(rootR, TRUNK_BASE, style = Stroke(width = 7.5f * treeScale, cap = StrokeCap.Round))
-
-    // 2. Thick organic curved trunk
-    drawTaperedTrunk(x, y, swayX, trunkTopY, 22f * treeScale, 10f * treeScale)
-
-    // 3. Branches
-    val midY = y - 75f * treeScale
-    val midX = x + (swayX - x) * 0.45f
-    
-    // Low left branch
-    val branchL1 = Offset(swayX - 70f * treeScale, trunkTopY + 45f * treeScale)
-    drawLine(TRUNK_MAIN, Offset(midX, midY), branchL1, strokeWidth = 11f * treeScale, cap = StrokeCap.Round)
-    drawLine(TRUNK_HIGHLIGHT, branchL1, Offset(swayX - 95f * treeScale, trunkTopY + 30f * treeScale), strokeWidth = 6f * treeScale, cap = StrokeCap.Round)
-
-    // Low right branch
-    val branchR1 = Offset(swayX + 68f * treeScale, trunkTopY + 40f * treeScale)
-    drawLine(TRUNK_MAIN, Offset(midX + 2f, midY + 12f * treeScale), branchR1, strokeWidth = 10f * treeScale, cap = StrokeCap.Round)
-    drawLine(TRUNK_HIGHLIGHT, branchR1, Offset(swayX + 90f * treeScale, trunkTopY + 22f * treeScale), strokeWidth = 5.5f * treeScale, cap = StrokeCap.Round)
-
-    // Upper branches
-    val upperY = y - 115f * treeScale
-    val upperX = x + (swayX - x) * 0.7f
-    drawLine(TRUNK_MAIN, Offset(upperX, upperY), Offset(swayX - 50f * treeScale, trunkTopY + 5f * treeScale), strokeWidth = 8f * treeScale, cap = StrokeCap.Round)
-    drawLine(TRUNK_MAIN, Offset(upperX, upperY), Offset(swayX + 48f * treeScale, trunkTopY - 5f * treeScale), strokeWidth = 7.5f * treeScale, cap = StrokeCap.Round)
-    drawLine(TRUNK_MAIN, Offset(upperX, upperY), Offset(swayX, trunkTopY - 20f * treeScale), strokeWidth = 9f * treeScale, cap = StrokeCap.Round)
-
-    // 4. Multi-layered Cloud Canopy
-    drawCanopyCloud(swayX - 82f * treeScale, trunkTopY + 35f * treeScale, 38f * treeScale)
-    drawCanopyCloud(swayX + 80f * treeScale, trunkTopY + 28f * treeScale, 36f * treeScale)
-    drawCanopyCloud(swayX - 45f * treeScale, trunkTopY + 2f * treeScale, 44f * treeScale)
-    drawCanopyCloud(swayX + 42f * treeScale, trunkTopY - 6f * treeScale, 42f * treeScale)
-    drawCanopyCloud(swayX, trunkTopY - 32f * treeScale, 56f * treeScale)
-    
-    // Top Highlights & Zen Leaf Nodes
-    drawCircle(CANOPY_WHITE, 26f * treeScale, Offset(swayX + 10f * treeScale, trunkTopY - 55f * treeScale))
-    drawCircle(CANOPY_WHITE, 20f * treeScale, Offset(swayX - 18f * treeScale, trunkTopY - 50f * treeScale))
-    drawCircle(CANOPY_LIGHT, 16f * treeScale, Offset(swayX + 32f * treeScale, trunkTopY - 40f * treeScale))
-
-    // Glowing Spores / Zen Sparkles
-    val auraRadius = 110f * treeScale * glow
-    drawCircle(Color(0x15FFFFFF), auraRadius, Offset(swayX, trunkTopY - 15f * treeScale))
-    drawCircle(Color(0x28FFFFFF), 4f * treeScale, Offset(swayX - 60f * treeScale, trunkTopY - 40f * treeScale))
-    drawCircle(Color(0x28FFFFFF), 3.5f * treeScale, Offset(swayX + 70f * treeScale, trunkTopY - 60f * treeScale))
-    drawCircle(Color(0x35FFFFFF), 5f * treeScale, Offset(swayX + 15f * treeScale, trunkTopY - 80f * treeScale))
-}
-
-// ── Stage 5: Garden ──
-private fun DrawScope.drawDetailedGarden(x: Float, y: Float, sway: Float, s: Float, glow: Float) {
-    drawDetailedPlant(x - 90f * s, y + 5f, sway * 0.7f, s * 0.65f, glow)
-    drawDetailedSprout(x + 92f * s, y + 8f, sway * -0.6f, s * 0.7f, glow)
-    drawDetailedTree(x, y, sway, s, glow, 1.05f)
-}
-
-// ── Stage 6: Flourishing Forest ──
-private fun DrawScope.drawDetailedForest(x: Float, y: Float, sway: Float, s: Float, glow: Float) {
-    drawDetailedPlant(x - 110f * s, y + 5f, sway * 0.5f, s * 0.55f, glow)
-    drawDetailedPlant(x + 115f * s, y + 6f, sway * -0.7f, s * 0.58f, glow)
-    drawDetailedSprout(x - 55f * s, y + 10f, sway * 0.8f, s * 0.5f, glow)
-    drawDetailedSprout(x + 60f * s, y + 12f, sway * -0.5f, s * 0.52f, glow)
-    drawDetailedTree(x, y, sway, s, glow, 1.15f)
-}
-
-// ── Helper: Draw tapered organic trunk ──
-private fun DrawScope.drawTaperedTrunk(
+// ═══════════════════════════════════════════════════════
+// TRUNK — thicker, organic 3D trunk with bark seam highlight
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawRichTrunk(
     baseX: Float, baseY: Float,
     topX: Float, topY: Float,
-    baseWidth: Float, topWidth: Float
+    baseW: Float, topW: Float
 ) {
+    // Outer shadow trunk silhouette
+    val shadowPath = Path().apply {
+        moveTo(baseX - baseW - 3f, baseY + 4f)
+        cubicTo(baseX - baseW * 0.9f, baseY - (baseY - topY) * 0.4f,
+            topX - topW * 1.3f, topY + (baseY - topY) * 0.28f,
+            topX - topW - 2f, topY + 2f)
+        lineTo(topX + topW + 2f, topY + 2f)
+        cubicTo(topX + topW * 1.3f, topY + (baseY - topY) * 0.28f,
+            baseX + baseW * 0.9f, baseY - (baseY - topY) * 0.4f,
+            baseX + baseW + 3f, baseY + 4f)
+        close()
+    }
+    drawPath(shadowPath, Color(0x60000000), style = Fill)
+
+    // Main trunk body
     val trunkPath = Path().apply {
-        moveTo(baseX - baseWidth, baseY)
-        cubicTo(
-            baseX - baseWidth * 0.8f, baseY - (baseY - topY) * 0.4f,
-            topX - topWidth * 1.2f, topY + (baseY - topY) * 0.3f,
-            topX - topWidth, topY
-        )
-        lineTo(topX + topWidth, topY)
-        cubicTo(
-            topX + topWidth * 1.2f, topY + (baseY - topY) * 0.3f,
-            baseX + baseWidth * 0.8f, baseY - (baseY - topY) * 0.4f,
-            baseX + baseWidth, baseY
-        )
+        moveTo(baseX - baseW, baseY)
+        cubicTo(baseX - baseW * 0.82f, baseY - (baseY - topY) * 0.38f,
+            topX - topW * 1.15f, topY + (baseY - topY) * 0.3f,
+            topX - topW, topY)
+        lineTo(topX + topW, topY)
+        cubicTo(topX + topW * 1.15f, topY + (baseY - topY) * 0.3f,
+            baseX + baseW * 0.82f, baseY - (baseY - topY) * 0.38f,
+            baseX + baseW, baseY)
         close()
     }
     drawPath(trunkPath, TRUNK_BASE, style = Fill)
 
-    val barkPath = Path().apply {
-        moveTo(baseX - baseWidth * 0.35f, baseY)
-        cubicTo(
-            baseX - baseWidth * 0.25f, baseY - (baseY - topY) * 0.4f,
-            topX - topWidth * 0.4f, topY + (baseY - topY) * 0.3f,
-            topX - topWidth * 0.3f, topY
-        )
-        lineTo(topX + topWidth * 0.3f, topY)
-        cubicTo(
-            topX + topWidth * 0.4f, topY + (baseY - topY) * 0.3f,
-            baseX + baseWidth * 0.25f, baseY - (baseY - topY) * 0.4f,
-            baseX + baseWidth * 0.35f, baseY
-        )
+    // Mid-tone volume layer
+    val midPath = Path().apply {
+        moveTo(baseX - baseW * 0.55f, baseY)
+        cubicTo(baseX - baseW * 0.42f, baseY - (baseY - topY) * 0.38f,
+            topX - topW * 0.55f, topY + (baseY - topY) * 0.3f,
+            topX - topW * 0.4f, topY)
+        lineTo(topX + topW * 0.4f, topY)
+        cubicTo(topX + topW * 0.55f, topY + (baseY - topY) * 0.3f,
+            baseX + baseW * 0.42f, baseY - (baseY - topY) * 0.38f,
+            baseX + baseW * 0.55f, baseY)
         close()
     }
-    drawPath(barkPath, TRUNK_MAIN, style = Fill)
+    drawPath(midPath, TRUNK_MAIN, style = Fill)
+
+    // Central highlight seam (gives the 3D rounded trunk feel)
+    val highlightPath = Path().apply {
+        moveTo(baseX - baseW * 0.12f, baseY)
+        cubicTo(baseX - baseW * 0.08f, baseY - (baseY - topY) * 0.38f,
+            topX - topW * 0.15f, topY + (baseY - topY) * 0.3f,
+            topX, topY)
+    }
+    drawPath(highlightPath, TRUNK_MID, style = Stroke(width = baseW * 0.28f, cap = StrokeCap.Round))
+    drawPath(highlightPath, TRUNK_HIGHLIGHT, style = Stroke(width = baseW * 0.10f, cap = StrokeCap.Round))
+
+    // Bark texture lines (2 subtle vertical lines)
+    val bark1 = Path().apply {
+        moveTo(baseX - baseW * 0.35f, baseY)
+        cubicTo(baseX - baseW * 0.25f, baseY - (baseY - topY) * 0.3f,
+            topX - topW * 0.6f, topY + (baseY - topY) * 0.2f,
+            topX - topW * 0.55f, topY + 4f)
+    }
+    drawPath(bark1, Color(0x30FFFFFF), style = Stroke(width = baseW * 0.06f, cap = StrokeCap.Round))
+
+    val bark2 = Path().apply {
+        moveTo(baseX + baseW * 0.4f, baseY)
+        cubicTo(baseX + baseW * 0.3f, baseY - (baseY - topY) * 0.25f,
+            topX + topW * 0.55f, topY + (baseY - topY) * 0.15f,
+            topX + topW * 0.5f, topY + 6f)
+    }
+    drawPath(bark2, Color(0x20FFFFFF), style = Stroke(width = baseW * 0.05f, cap = StrokeCap.Round))
 }
 
-// ── Helper: Draw cloud foliage cluster ──
-private fun DrawScope.drawCanopyCloud(cx: Float, cy: Float, radius: Float) {
-    drawCircle(CANOPY_SHADOW, radius, Offset(cx, cy + radius * 0.15f))
-    drawCircle(CANOPY_DEEP, radius * 0.95f, Offset(cx - radius * 0.3f, cy + radius * 0.1f))
-    drawCircle(CANOPY_DEEP, radius * 0.9f, Offset(cx + radius * 0.35f, cy + radius * 0.05f))
-    drawCircle(CANOPY_MID, radius * 0.85f, Offset(cx - radius * 0.15f, cy - radius * 0.1f))
-    drawCircle(CANOPY_MID, radius * 0.8f, Offset(cx + radius * 0.2f, cy - radius * 0.15f))
-    drawCircle(CANOPY_LIGHT, radius * 0.65f, Offset(cx, cy - radius * 0.25f))
-    drawCircle(CANOPY_WHITE, radius * 0.4f, Offset(cx + radius * 0.1f, cy - radius * 0.35f))
+// ═══════════════════════════════════════════════════════
+// ROOT FLARES
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawRootFlares(x: Float, y: Float, s: Float) {
+    val roots = listOf(
+        Triple(-28f, 4f, -52f to 14f),
+        Triple(28f, 4f, 50f to 13f),
+        Triple(-14f, 2f, -34f to 20f),
+        Triple(14f, 2f, 32f to 20f)
+    )
+    for ((ox, oy, end) in roots) {
+        val rootPath = Path().apply {
+            moveTo(x + ox * s, y + oy * s)
+            cubicTo(
+                x + ox * s * 0.6f, y + oy * s + 6f * s,
+                x + end.first * s * 0.7f, y + end.second * s * 0.7f,
+                x + end.first * s, y + end.second * s
+            )
+        }
+        val w = (6f - kotlin.math.abs(ox) * 0.06f).coerceAtLeast(3f) * s
+        drawPath(rootPath, TRUNK_BASE, style = Stroke(width = w, cap = StrokeCap.Round))
+        drawPath(rootPath, TRUNK_MAIN, style = Stroke(width = w * 0.5f, cap = StrokeCap.Round))
+    }
 }
 
-// ── Helper: Draw organic leaf ──
+// ═══════════════════════════════════════════════════════
+// BRANCH helper
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawBranch(
+    fromX: Float, fromY: Float,
+    toX: Float, toY: Float,
+    width: Float
+) {
+    drawLine(TRUNK_BASE, Offset(fromX, fromY), Offset(toX, toY), strokeWidth = width * 1.1f, cap = StrokeCap.Round)
+    drawLine(TRUNK_MAIN, Offset(fromX, fromY), Offset(toX, toY), strokeWidth = width * 0.8f, cap = StrokeCap.Round)
+    drawLine(TRUNK_MID,  Offset(fromX, fromY), Offset(toX, toY), strokeWidth = width * 0.3f, cap = StrokeCap.Round)
+}
+
+// ═══════════════════════════════════════════════════════
+// GROUND MOUND
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawGroundMound(x: Float, y: Float, radius: Float, s: Float) {
+    drawOval(
+        brush = Brush.radialGradient(
+            colors = listOf(Color(0x20FFFFFF), Color(0x00000000)),
+            center = Offset(x, y + 4f * s),
+            radius = radius * 1.4f
+        ),
+        topLeft = Offset(x - radius * 1.4f, y - 10f * s),
+        size = Size(radius * 2.8f, 32f * s)
+    )
+    val moundPath = Path().apply {
+        moveTo(x - radius, y + 6f * s)
+        cubicTo(x - radius * 0.6f, y - 10f * s, x + radius * 0.6f, y - 10f * s, x + radius, y + 6f * s)
+        cubicTo(x + radius * 0.5f, y + 16f * s, x - radius * 0.5f, y + 16f * s, x - radius, y + 6f * s)
+        close()
+    }
+    drawPath(moundPath, SOIL_BASE,    style = Fill)
+    drawPath(moundPath, SOIL_SURFACE, style = Stroke(width = 1.8f * s))
+    // pebbles
+    for ((ox, oy, r) in listOf(
+        Triple(-0.45f, 2f, 2.8f), Triple(0.35f, 1f, 3.4f),
+        Triple(-0.12f, 5f, 2.0f), Triple(0.6f, 4f, 2.3f)
+    )) {
+        drawCircle(SOIL_HIGHLIGHT, r * s, Offset(x + radius * ox, y + oy * s))
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// STAGE 1: SEED
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawDetailedSeedWithGround(
+    x: Float, y: Float, s: Float,
+    glow: Float, breath: Float, particleAngle: Float
+) {
+    val soilW = 140f * s
+    val seedScale = s * 1.5f * breath
+    val seedX = x
+    val seedY = y - 4f * s
+
+    // Glow orb behind seed
+    drawGlowOrb(seedX, seedY - 10f * s, 50f * s, glow, particleAngle, 5)
+
+    // Soil bed
+    drawOval(color = Color(0x50000000),
+        topLeft = Offset(x - soilW * 1.05f, y + 8f * s),
+        size = Size(soilW * 2.1f, soilW * 0.38f))
+    val soilPath = Path().apply {
+        moveTo(x - soilW, y + 12f * s)
+        cubicTo(x - soilW * 0.6f, y - 14f * s, x + soilW * 0.6f, y - 14f * s, x + soilW, y + 12f * s)
+        cubicTo(x + soilW * 0.7f, y + 26f * s, x - soilW * 0.7f, y + 26f * s, x - soilW, y + 12f * s)
+        close()
+    }
+    drawPath(soilPath, SOIL_MID, style = Fill)
+    val rimPath = Path().apply {
+        moveTo(x - soilW * 0.95f, y + 10f * s)
+        cubicTo(x - soilW * 0.55f, y - 12f * s, x + soilW * 0.55f, y - 12f * s, x + soilW * 0.95f, y + 10f * s)
+    }
+    drawPath(rimPath, SOIL_HIGHLIGHT, style = Stroke(width = 2.2f * s, cap = StrokeCap.Round))
+    for ((ox, oy, r) in listOf(Triple(-0.5f, 2f, 4.5f), Triple(-0.35f, 8f, 3.5f),
+            Triple(0.45f, 4f, 5f), Triple(0.65f, 6f, 3f))) {
+        drawCircle(SOIL_HIGHLIGHT, r * s, Offset(x + soilW * ox, y + oy * s))
+    }
+
+    // Root tendrils
+    for ((cp1, cp2, ep) in listOf(
+        Triple(Offset(x - 8f*s, y+14f*s), Offset(x-18f*s, y+20f*s), Offset(x-26f*s, y+24f*s)),
+        Triple(Offset(x + 6f*s, y+12f*s), Offset(x+15f*s, y+18f*s), Offset(x+24f*s, y+22f*s))
+    )) {
+        val rp = Path().apply { moveTo(x, y+2f*s); cubicTo(cp1.x,cp1.y,cp2.x,cp2.y,ep.x,ep.y) }
+        drawPath(rp, TRUNK_MID, style = Stroke(width = 2f*s, cap = StrokeCap.Round))
+        drawPath(rp, TRUNK_HIGHLIGHT, style = Stroke(width = 0.8f*s, cap = StrokeCap.Round))
+    }
+
+    // Seed husk
+    val seedHusk = Path().apply {
+        moveTo(seedX, seedY - 18f*seedScale)
+        cubicTo(seedX+16f*seedScale,seedY-14f*seedScale, seedX+16f*seedScale,seedY+12f*seedScale, seedX,seedY+20f*seedScale)
+        cubicTo(seedX-16f*seedScale,seedY+12f*seedScale, seedX-16f*seedScale,seedY-14f*seedScale, seedX,seedY-18f*seedScale)
+        close()
+    }
+    drawPath(seedHusk, TRUNK_MAIN, style = Fill)
+    drawPath(seedHusk, TRUNK_MID, style = Stroke(width = 2f*seedScale))
+    val innerSeed = Path().apply {
+        moveTo(seedX, seedY-12f*seedScale)
+        cubicTo(seedX+9f*seedScale,seedY-8f*seedScale, seedX+9f*seedScale,seedY+8f*seedScale, seedX,seedY+13f*seedScale)
+        cubicTo(seedX-9f*seedScale,seedY+8f*seedScale, seedX-9f*seedScale,seedY-8f*seedScale, seedX,seedY-12f*seedScale)
+        close()
+    }
+    drawPath(innerSeed, CANOPY_WHITE, style = Fill)
+
+    // Shoot
+    val shootTipY = seedY - 45f*seedScale
+    val shootPath = Path().apply {
+        moveTo(seedX, seedY-14f*seedScale)
+        cubicTo(seedX-4f*seedScale,seedY-26f*seedScale, seedX+6f*seedScale,seedY-36f*seedScale, seedX+2f*seedScale,shootTipY)
+    }
+    drawPath(shootPath, TRUNK_MID, style = Stroke(width=5f*seedScale, cap=StrokeCap.Round))
+    drawPath(shootPath, CANOPY_WHITE, style = Stroke(width=2f*seedScale, cap=StrokeCap.Round))
+
+    drawLeaf(seedX-10f*seedScale, shootTipY+4f*seedScale, -40f, 18f*seedScale, CANOPY_HILIGHT)
+    drawLeaf(seedX+12f*seedScale, shootTipY+2f*seedScale,  38f, 20f*seedScale, CANOPY_WHITE)
+    drawCircle(CANOPY_WHITE, 4f*seedScale*glow, Offset(seedX, seedY))
+    drawCircle(Color(0x50FFFFFF), 8f*seedScale*glow, Offset(seedX, seedY))
+}
+
+// ═══════════════════════════════════════════════════════
+// STAGE 2: SPROUT
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawDetailedSprout(
+    x: Float, y: Float, sway: Float, s: Float,
+    glow: Float, particleAngle: Float
+) {
+    val sc = s * 1.4f
+    val tipX = x + sway * 2f
+    val tipY = y - 90f * sc
+
+    // Glow orb behind canopy
+    drawGlowOrb(tipX, tipY - 10f*sc, 38f*sc, glow, particleAngle, 4)
+
+    // Organic stem
+    val stemPath = Path().apply {
+        moveTo(x, y)
+        cubicTo(x - 8f*sc, y - 30f*sc, tipX - 4f*sc, y - 60f*sc, tipX, tipY)
+    }
+    drawPath(stemPath, TRUNK_BASE,      style = Stroke(width=7f*sc, cap=StrokeCap.Round))
+    drawPath(stemPath, TRUNK_MAIN,      style = Stroke(width=5f*sc, cap=StrokeCap.Round))
+    drawPath(stemPath, TRUNK_HIGHLIGHT, style = Stroke(width=2f*sc, cap=StrokeCap.Round))
+
+    // Side leaves
+    drawLeaf(x - 22f*sc, y - 45f*sc, -50f, 22f*sc, CANOPY_MID)
+    drawLeaf(x + 24f*sc, y - 55f*sc,  45f, 24f*sc, CANOPY_LIGHT)
+
+    // Foliage spheres (detailed)
+    drawFoliageSphere(tipX - 11f*sc, tipY + 8f*sc,  26f*sc)
+    drawFoliageSphere(tipX + 9f*sc,  tipY + 4f*sc,  24f*sc)
+    drawFoliageSphere(tipX,          tipY - 12f*sc,  28f*sc)
+}
+
+// ═══════════════════════════════════════════════════════
+// STAGE 3: PLANT / YOUNG BONSAI
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawDetailedPlant(
+    x: Float, y: Float, sway: Float, s: Float,
+    glow: Float, particleAngle: Float
+) {
+    val sc = s * 1.22f
+    val trunkTopY = y - 130f*sc
+    val swayX = x + sway * 3f
+
+    // Glow orb
+    drawGlowOrb(swayX, trunkTopY - 30f*sc, 58f*sc, glow, particleAngle, 5)
+
+    // Trunk
+    drawRichTrunk(x, y, swayX, trunkTopY, 14f*sc, 7f*sc)
+
+    // Branches
+    val midY = y - 60f*sc
+    val midX = x + (swayX - x) * 0.5f
+    drawBranch(midX, midY, swayX - 46f*sc, trunkTopY + 30f*sc, 7f*sc)
+    drawBranch(midX, midY, swayX + 44f*sc, trunkTopY + 25f*sc, 6.5f*sc)
+    drawBranch(midX, midY, swayX,           trunkTopY - 10f*sc, 8f*sc)
+
+    // Foliage
+    drawFoliageSphere(swayX - 46f*sc, trunkTopY + 14f*sc,  34f*sc)
+    drawFoliageSphere(swayX + 44f*sc, trunkTopY + 10f*sc,  32f*sc)
+    drawFoliageSphere(swayX,           trunkTopY - 30f*sc,  42f*sc)
+}
+
+// ═══════════════════════════════════════════════════════
+// STAGE 4: MAJESTIC TREE
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawDetailedTree(
+    x: Float, y: Float, sway: Float, s: Float,
+    glow: Float, particleAngle: Float, extraScale: Float
+) {
+    val sc = s * extraScale
+    val swayX = x + sway * 3.5f
+    val trunkTopY = y - 160f * sc
+
+    // Glow orb — drawn first so tree is on top
+    drawGlowOrb(swayX, trunkTopY - 38f*sc, 88f*sc, glow, particleAngle, 7)
+
+    // Root flares
+    drawRootFlares(x, y, sc)
+
+    // Trunk
+    drawRichTrunk(x, y, swayX, trunkTopY, 24f*sc, 11f*sc)
+
+    // Branches
+    val midY = y - 72f*sc
+    val midX = x + (swayX - x) * 0.45f
+    val upperY = y - 118f*sc
+    val upperX = x + (swayX - x) * 0.7f
+
+    drawBranch(midX, midY, swayX - 72f*sc, trunkTopY + 45f*sc, 12f*sc)
+    drawBranch(midX, midY, swayX + 70f*sc, trunkTopY + 40f*sc, 11f*sc)
+    drawBranch(upperX, upperY, swayX - 52f*sc, trunkTopY + 8f*sc,  8.5f*sc)
+    drawBranch(upperX, upperY, swayX + 50f*sc, trunkTopY + 2f*sc,  8f*sc)
+    drawBranch(upperX, upperY, swayX,           trunkTopY - 18f*sc, 9f*sc)
+
+    // Sub-branches
+    drawBranch(swayX - 72f*sc, trunkTopY + 45f*sc, swayX - 96f*sc, trunkTopY + 28f*sc, 5.5f*sc)
+    drawBranch(swayX + 70f*sc, trunkTopY + 40f*sc, swayX + 92f*sc, trunkTopY + 22f*sc, 5f*sc)
+
+    // Foliage cloud — 5 main spheres matching reference
+    drawFoliageSphere(swayX - 84f*sc, trunkTopY + 30f*sc,  40f*sc)
+    drawFoliageSphere(swayX + 82f*sc, trunkTopY + 24f*sc,  38f*sc)
+    drawFoliageSphere(swayX - 46f*sc, trunkTopY - 2f*sc,   46f*sc)
+    drawFoliageSphere(swayX + 44f*sc, trunkTopY - 8f*sc,   44f*sc)
+    drawFoliageSphere(swayX,           trunkTopY - 36f*sc,  58f*sc)
+}
+
+// ═══════════════════════════════════════════════════════
+// STAGE 5: GARDEN
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawDetailedGarden(
+    x: Float, y: Float, sway: Float, s: Float,
+    glow: Float, particleAngle: Float
+) {
+    drawDetailedPlant(x - 88f*s, y + 5f, sway * 0.7f, s * 0.64f, glow, particleAngle)
+    drawDetailedSprout(x + 90f*s, y + 8f, sway * -0.6f, s * 0.68f, glow, particleAngle)
+    drawDetailedTree(x, y, sway, s, glow, particleAngle, 1.05f)
+}
+
+// ═══════════════════════════════════════════════════════
+// STAGE 6: FOREST
+// ═══════════════════════════════════════════════════════
+private fun DrawScope.drawDetailedForest(
+    x: Float, y: Float, sway: Float, s: Float,
+    glow: Float, particleAngle: Float
+) {
+    drawDetailedPlant(x - 108f*s, y + 5f, sway * 0.5f, s * 0.54f, glow, particleAngle)
+    drawDetailedPlant(x + 112f*s, y + 6f, sway * -0.7f, s * 0.56f, glow, particleAngle)
+    drawDetailedSprout(x - 52f*s, y + 10f, sway * 0.8f,  s * 0.5f, glow, particleAngle)
+    drawDetailedSprout(x + 58f*s, y + 12f, sway * -0.5f, s * 0.52f, glow, particleAngle)
+    drawDetailedTree(x, y, sway, s, glow, particleAngle, 1.15f)
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPER: Organic leaf shape
+// ═══════════════════════════════════════════════════════
 private fun DrawScope.drawLeaf(x: Float, y: Float, angleDeg: Float, size: Float, color: Color) {
     val leaf = Path().apply {
         moveTo(x, y)
-        cubicTo(x - size * 0.5f, y - size * 0.7f, x - size * 0.2f, y - size, x, y - size * 1.2f)
-        cubicTo(x + size * 0.2f, y - size, x + size * 0.5f, y - size * 0.7f, x, y)
+        cubicTo(x - size*0.5f, y - size*0.7f, x - size*0.2f, y - size, x, y - size*1.2f)
+        cubicTo(x + size*0.2f, y - size, x + size*0.5f, y - size*0.7f, x, y)
         close()
     }
     drawPath(leaf, color, style = Fill)
+    // Leaf vein
+    val vein = Path().apply {
+        moveTo(x, y)
+        lineTo(x, y - size * 1.1f)
+    }
+    drawPath(vein, Color(0x30000000), style = Stroke(width = size * 0.06f, cap = StrokeCap.Round))
 }
