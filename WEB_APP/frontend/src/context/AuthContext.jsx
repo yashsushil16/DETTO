@@ -11,7 +11,7 @@ const firebaseConfig = {
   projectId: "detto-8e2d5",
   storageBucket: "detto-8e2d5.firebasestorage.app",
   messagingSenderId: "1003767564581",
-  appId: "1:1003767564581:web:REPLACE_WITH_WEB_APP_ID" // Get from Firebase Console → Add Web App
+  appId: "1:1003767564581:web:034f4fffa93bba960bf2cc" // Get from Firebase Console → Add Web App
 };
 
 const app = initializeApp(firebaseConfig);
