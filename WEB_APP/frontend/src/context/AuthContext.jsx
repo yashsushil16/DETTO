@@ -6,7 +6,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 // IMPORTANT: In Firebase Console → Project Settings → Your Apps → Web App
 // Copy the firebaseConfig object and paste here to replace this one.
 const firebaseConfig = {
-  apiKey: "AIzaSyDN3-xpCiPmXyfUYZcEE2_1MF2GT07BTp8",
+  apiKey: GOOGLE_API,
   authDomain: "detto-8e2d5.firebaseapp.com",
   projectId: "detto-8e2d5",
   storageBucket: "detto-8e2d5.firebasestorage.app",
