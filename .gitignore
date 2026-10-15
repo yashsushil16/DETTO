@@ -10,7 +10,7 @@
 .cxx
 local.properties
 .kotlin
-
+.env
 # Build artifacts
 **/build/
 **/.gradle/
